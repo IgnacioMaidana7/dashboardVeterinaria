@@ -1,221 +1,263 @@
 import { useState, useEffect } from 'react';
-import { Users, TrendingUp } from 'lucide-react';
-import { StatCard, Card, PageHeader } from '@/components/shared';
+import { Users, Calendar, MapPin, Home, ChevronDown, Filter } from 'lucide-react';
+import { PageHeader } from '@/components/shared';
+import { DonutChart, HistogramChart, HorizontalBarChart, ChartCard } from '@/components/charts';
 import styles from './PanoramaPage.module.css';
 
-interface DashboardData {
+interface PanoramaData {
   totales: number;
-  tasa_vacunacion: number;
-  tasa_castracion: number;
-  tasa_desparasitacion: number;
-  barrios: {
-    barrio: string;
-    encuestados: number;
-    castradas: number;
-    vacunadas: number;
-    desparasitadas: number;
-  }[];
+  periodo_recoleccion: string;
+  ciudades_cubiertas: number;
+  promedio_integrantes: number;
+  composicion_mascotas: {
+    solo_perros: number;
+    solo_gatos: number;
+    mixto: number;
+  };
+  demanda_accion: {
+    total: number;
+    demandan: number;
+    no_demandan: number;
+    pct_demandan: number;
+  };
+  integrantes: {
+    distribucion: { integrantes: number; frecuencia: number }[];
+    media: number;
+    mediana: number;
+  };
+  callejeros: {
+    total_respuestas: number;
+    frecuencia: { respuesta: string; cantidad: number; porcentaje: number }[];
+  };
+}
+
+interface FiltrosData {
+  barrios: string[];
 }
 
 export function PanoramaPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<PanoramaData | null>(null);
+  const [barrios, setBarrios] = useState<string[]>([]);
+  const [barrioSeleccionado, setBarrioSeleccionado] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Cargar lista de barrios una sola vez
   useEffect(() => {
-    fetch('http://localhost:5000/api/stats/page-resumen')
-      .then((res) => res.json())
+    fetch('http://localhost:5000/api/stats/filtros')
+      .then((r) => r.json())
+      .then((json: FiltrosData) => {
+        setBarrios(json.barrios || []);
+      })
+      .catch((err) => console.error('Error cargando barrios:', err));
+  }, []);
+
+  // Cargar datos cada vez que cambia el barrio
+  useEffect(() => {
+    setLoading(true);
+    const url = barrioSeleccionado
+      ? `http://localhost:5000/api/stats/panorama?barrio=${encodeURIComponent(barrioSeleccionado)}`
+      : 'http://localhost:5000/api/stats/panorama';
+
+    fetch(url)
+      .then((r) => r.json())
       .then((json) => {
         setData(json);
         setLoading(false);
       })
       .catch((err) => {
-        console.error('Error fetching data:', err);
+        console.error('Error cargando panorama:', err);
         setLoading(false);
       });
-  }, []);
+  }, [barrioSeleccionado]);
 
-  if (loading || !data) return <div>Cargando...</div>;
+  const handleBarrioChange = (nuevoBarrio: string) => {
+    setRefreshing(true);
+    setBarrioSeleccionado(nuevoBarrio);
+    // La animación dura 600ms (espera a que termine el fade-out antes de mostrar los nuevos datos)
+    setTimeout(() => setRefreshing(false), 600);
+  };
 
-  const coverageRings = [
-    { label: 'Vacunación', value: Math.round(data.tasa_vacunacion * 10) / 10, color: 'var(--color-navy-700)' },
-    { label: 'Desparasitación', value: Math.round(data.tasa_desparasitacion * 10) / 10, color: 'var(--color-amber-500)' },
-    { label: 'Castración', value: Math.round(data.tasa_castracion * 10) / 10, color: 'var(--color-success)' },
+  if (loading) return <div>Cargando...</div>;
+
+  if (!data) return <div>Error al cargar datos</div>;
+
+  // Donut: Composición de mascotas
+  const mascotaColors = ['#1B3A4B', '#2D8659', '#E8913A'];
+  const composicionData = [
+    { name: 'Solo Perros', value: data.composicion_mascotas.solo_perros, color: mascotaColors[0] },
+    { name: 'Solo Gatos', value: data.composicion_mascotas.solo_gatos, color: mascotaColors[1] },
+    { name: 'Perros y Gatos', value: data.composicion_mascotas.mixto, color: mascotaColors[2] },
+  ];
+
+  // Histograma: Integrantes
+  const histogramData = data.integrantes.distribucion.map((d) => ({
+    bin: String(d.integrantes),
+    count: d.frecuencia,
+  }));
+
+  // Barras horizontales: Callejeros
+  const callejerosBarData = data.callejeros.frecuencia.map((f) => {
+    const colorMap: Record<string, string> = {
+      'Todo el tiempo': '#C0392B',
+      'A veces': '#E8913A',
+      'Raramente': '#2980B9',
+      'Rara vez': '#2980B9',
+      'Nunca': '#2D8659',
+    };
+    return {
+      name: f.respuesta,
+      value: f.cantidad,
+      pct: f.porcentaje,
+      color: colorMap[f.respuesta] || '#6C757D',
+    };
+  });
+
+  // Demanda municipal
+  const demandaData = [
+    { name: 'Exigen acción municipal', value: data.demanda_accion.demandan, color: '#1B3A4B' },
+    { name: 'No es necesaria', value: data.demanda_accion.no_demandan, color: '#ADB5BD' },
   ];
 
   return (
     <div className={styles.page}>
-      <PageHeader title="Panorama General" />
+      <PageHeader
+        title="Panorama General"
+        subtitle="Encuesta sobre Tenencia Responsable de Mascotas — San Francisco, Misiones"
+      />
 
-      {/* Top stats */}
-      <div className={styles.topRow}>
-        {/* Total encuestados */}
-        <Card padding="md" className={styles.totalCard}>
-          <div className={styles.totalHeader}>
-            <span className={styles.totalLabel}>TOTAL ENCUESTADOS</span>
-            <div className={styles.totalIcon}>
-              <Users size={18} />
+      {/* Filtro por barrio */}
+      <div className={styles.filterBar}>
+        <div className={styles.filterLabel}>
+          <Filter size={14} />
+          <span>Filtrar por barrio</span>
+        </div>
+        <div className={styles.selectWrap}>
+          <select
+            className={styles.select}
+            value={barrioSeleccionado}
+            onChange={(e) => handleBarrioChange(e.target.value)}
+          >
+            <option value="">Todos los barrios</option>
+            {barrios.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={14} className={styles.selectIcon} />
+        </div>
+      </div>
+
+      {/* Gráficos con animación de recarga */}
+      <div className={`${styles.chartsContainer} ${refreshing ? styles.refreshing : ''}`}>
+      <div className={styles.kpiRow}>
+        <KpiCard
+          icon={<Users size={20} />}
+          label="Total Encuestados"
+          value={data.totales.toLocaleString()}
+          color="#1B3A4B"
+        />
+        <KpiCard
+          icon={<Calendar size={20} />}
+          label="Período de Recolección"
+          value={data.periodo_recoleccion}
+          color="#E8913A"
+        />
+        <KpiCard
+          icon={<MapPin size={20} />}
+          label="Ciudades Cubiertas"
+          value={String(data.ciudades_cubiertas)}
+          color="#2D8659"
+        />
+        <KpiCard
+          icon={<Home size={20} />}
+          label="Prom. Integrantes por Familia"
+          value={String(data.promedio_integrantes)}
+          color="#2980B9"
+        />
+      </div>
+
+      {/* Donut principal */}
+      <div className={styles.donutSection}>
+        <DonutChart
+          title="Composición de Mascotas en los Hogares"
+          subtitle={`Distribución por tipo de tenencia (n=${data.totales})`}
+          data={composicionData}
+        />
+      </div>
+
+      {/* Histograma */}
+      <HistogramChart
+        title="Distribución de Integrantes por Familia"
+        subtitle={`Media=${data.integrantes.media} | Mediana=${data.integrantes.mediana}`}
+        data={histogramData}
+        mean={data.integrantes.media}
+        median={data.integrantes.mediana}
+      />
+
+      {/* Fila inferior: Callejeros + Demanda */}
+      <div className={styles.bottomRow}>
+        <HorizontalBarChart
+          title="Percepción de Animales Callejeros"
+          subtitle="Frecuencia de avistamientos reportados por los ciudadanos"
+          data={callejerosBarData}
+          xAxisLabel="Número de encuestados"
+        />
+        <ChartCard title="Demanda de Acción Municipal" subtitle="¿Consideran necesaria la participación del municipio?">
+          <div className={styles.demandaWrap}>
+            <ResponsiveSimpleBar data={demandaData} />
+            <div className={styles.demandaMeta}>
+              <div className={styles.demandaBig}>
+                <span className={styles.demandaPct}>{data.demanda_accion.pct_demandan}%</span>
+                <span className={styles.demandaLabel}>Exigen acción municipal</span>
+              </div>
+              <div className={styles.demandaSmall}>
+                <span className={styles.demandaPctSmall}>{100 - data.demanda_accion.pct_demandan}%</span>
+                <span className={styles.demandaLabelSmall}>Consideran que no es necesaria</span>
+              </div>
             </div>
           </div>
-          <div className={styles.totalValue}>{data.totales.toLocaleString()}</div>
-          <div className={styles.totalTrend}>
-            <TrendingUp size={14} />
-            <span>Datos actualizados</span>
-          </div>
-        </Card>
-
-        {/* Coverage rings */}
-        <Card padding="md" className={styles.coverageCard}>
-          <h3 className={styles.coverageTitle}>Tasas de Cobertura Sanitaria</h3>
-          <div className={styles.ringsRow}>
-            {coverageRings.map((ring) => (
-              <DonutRing key={ring.label} {...ring} />
-            ))}
-          </div>
-        </Card>
+        </ChartCard>
       </div>
-
-      {/* Distribution map placeholder */}
-      <Card padding="md" className={styles.mapCard}>
-        <div className={styles.mapHeader}>
-          <h3 className={styles.mapTitle}>Distribución por Barrios</h3>
-          <button className={styles.mapLink}>Ver tabla completa →</button>
-        </div>
-        <div className={styles.mapBody}>
-          <MapPlaceholder />
-        </div>
-      </Card>
-
-      {/* Stats grid */}
-      <div className={styles.statsGrid}>
-        <StatCard
-          label="Tasa de Castración"
-          value={`${Math.round(data.tasa_castracion * 10) / 10}%`}
-          progressBar={{ value: data.tasa_castracion, color: 'var(--color-navy-700)' }}
-          id="stat-castracion"
-        />
-        <StatCard
-          label="Tasa de Vacunación"
-          value={`${Math.round(data.tasa_vacunacion * 10) / 10}%`}
-          progressBar={{ value: data.tasa_vacunacion, color: 'var(--color-amber-500)' }}
-          id="stat-vacunacion"
-        />
-        <StatCard
-          label="Tasa de Desparasitación"
-          value={`${Math.round(data.tasa_desparasitacion * 10) / 10}%`}
-          progressBar={{ value: data.tasa_desparasitacion, color: 'var(--color-success)' }}
-          id="stat-desparasitacion"
-        />
       </div>
-
-      {/* Barrios table */}
-      <Card padding="none" className={styles.tableCard}>
-        <div className={styles.tableHeader}>
-          <h3 className={styles.tableTitle}>Detalle por Barrio</h3>
-        </div>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Barrio</th>
-                <th>Encuestados</th>
-                <th>Castración</th>
-                <th>Vacunación</th>
-                <th>Desparasitación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.barrios.map((row) => (
-                <tr key={row.barrio}>
-                  <td className={styles.barrio}>{row.barrio}</td>
-                  <td>{row.encuestados.toLocaleString()}</td>
-                  <td>
-                    <ProgressCell value={Math.round((row.castradas / row.encuestados) * 100) || 0} color="var(--color-navy-700)" />
-                  </td>
-                  <td>
-                    <ProgressCell value={Math.round((row.vacunadas / row.encuestados) * 100) || 0} color="var(--color-amber-500)" />
-                  </td>
-                  <td>
-                    <ProgressCell value={Math.round((row.desparasitadas / row.encuestados) * 100) || 0} color="var(--color-success)" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
     </div>
   );
 }
 
 /* ── Sub-components ── */
 
-function DonutRing({ label, value, color }: { label: string; value: number; color: string }) {
-  const r = 36;
-  const circ = 2 * Math.PI * r;
-  const dash = (value / 100) * circ;
-
+function KpiCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
   return (
-    <div className={styles.ring}>
-      <div className={styles.ringSvgWrap}>
-        <svg width="90" height="90" viewBox="0 0 90 90">
-          <circle cx="45" cy="45" r={r} fill="none" stroke="var(--color-gray-100)" strokeWidth="8" />
-          <circle
-            cx="45" cy="45" r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth="8"
-            strokeDasharray={`${dash} ${circ - dash}`}
-            strokeLinecap="round"
-            transform="rotate(-90 45 45)"
-          />
-        </svg>
-        <span className={styles.ringValue}>{value}%</span>
+    <div className={styles.kpiCard}>
+      <div className={styles.kpiCardIcon} style={{ backgroundColor: color + '12', color }}>
+        {icon}
       </div>
-      <span className={styles.ringLabel}>• {label}</span>
-    </div>
-  );
-}
-
-function ProgressCell({ value, color }: { value: number; color: string }) {
-  return (
-    <div className={styles.progressCell}>
-      <span className={styles.progressCellValue}>{value}%</span>
-      <div className={styles.progressCellTrack}>
-        <div className={styles.progressCellBar} style={{ width: `${value}%`, backgroundColor: color }} />
+      <div className={styles.kpiCardMeta}>
+        <span className={styles.kpiCardLabel}>{label}</span>
+        <span className={styles.kpiCardValue} style={{ color }}>{value}</span>
       </div>
     </div>
   );
 }
 
-function MapPlaceholder() {
+function ResponsiveSimpleBar({ data }: { data: { name: string; value: number; color: string }[] }) {
+  const max = Math.max(...data.map((d) => d.value), 1);
   return (
-    <div className={styles.mapPlaceholder}>
-      <div className={styles.mapTooltip}>
-        <div className={styles.mapTooltipTitle}>Zona Norte <span>(Destacada)</span></div>
-        <div className={styles.mapTooltipRow}><span>Encuestados</span><strong>450</strong></div>
-        <div className={styles.mapTooltipRow}><span>Índice Castración</span><strong className={styles.highlight}>65%</strong></div>
-      </div>
-      {/* SVG city grid */}
-      <svg viewBox="0 0 600 250" className={styles.mapSvg} aria-label="Mapa de distribución por barrios">
-        <rect width="600" height="250" fill="var(--color-navy-800)" rx="8" />
-        {Array.from({ length: 30 }).map((_, i) =>
-          Array.from({ length: 12 }).map((_, j) => (
-            <rect
-              key={`${i}-${j}`}
-              x={i * 20 + 2} y={j * 20 + 2}
-              width="16" height="16"
-              rx="2"
-              fill={`rgba(100,180,200,${Math.random() * 0.15 + 0.05})`}
+    <div className={styles.simpleBarWrap}>
+      {data.map((d) => (
+        <div key={d.name} className={styles.simpleBarRow}>
+          <div className={styles.simpleBarTrack}>
+            <div
+              className={styles.simpleBarFill}
+              style={{ width: `${(d.value / max) * 100}%`, backgroundColor: d.color }}
             />
-          ))
-        )}
-        {/* Barrio labels */}
-        <text x="80" y="60" fill="rgba(255,255,255,0.6)" fontSize="11" fontFamily="DM Sans">Norte</text>
-        <text x="280" y="60" fill="rgba(255,255,255,0.6)" fontSize="11" fontFamily="DM Sans">Centro</text>
-        <text x="480" y="60" fill="rgba(255,255,255,0.6)" fontSize="11" fontFamily="DM Sans">Este</text>
-        <text x="80" y="200" fill="rgba(255,255,255,0.6)" fontSize="11" fontFamily="DM Sans">Oeste</text>
-        <text x="280" y="200" fill="rgba(255,255,255,0.6)" fontSize="11" fontFamily="DM Sans">Sur</text>
-      </svg>
+          </div>
+          <div className={styles.simpleBarValue} style={{ color: d.color }}>
+            {d.value}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

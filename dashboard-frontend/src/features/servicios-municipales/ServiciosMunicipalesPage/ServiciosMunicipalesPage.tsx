@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Download, MoreVertical } from 'lucide-react';
 import { StatCard, Card, PageHeader, Button } from '@/components/shared';
+import { HorizontalBarChart, GroupedBarChart } from '@/components/charts';
 import styles from './ServiciosMunicipalesPage.module.css';
 
 interface MunicipioData {
@@ -21,15 +22,33 @@ interface MunicipioData {
   }[];
 }
 
+interface MedidasData {
+  medidas: { medida: string; total: number }[];
+  autopercepcion_responsabilidad: { nivel: string; total: number }[];
+  total_encuestados: number;
+}
+
+interface CombinacionesData {
+  nombre: string;
+  cantidad: number;
+}
+
 export function ServiciosMunicipalesPage() {
   const [data, setData] = useState<MunicipioData | null>(null);
+  const [medidas, setMedidas] = useState<MedidasData | null>(null);
+  const [combinaciones, setCombinaciones] = useState<CombinacionesData[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/stats/page-municipio')
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
+    Promise.all([
+      fetch('http://localhost:5000/api/stats/page-municipio').then((r) => r.json()),
+      fetch('http://localhost:5000/api/stats/medidas-municipio').then((r) => r.json()),
+      fetch('http://localhost:5000/api/stats/combinaciones-medidas').then((r) => r.json()),
+    ])
+      .then(([municipio, medidasData, combinacionesData]) => {
+        setData(municipio);
+        setMedidas(medidasData);
+        setCombinaciones(combinacionesData);
         setLoading(false);
       })
       .catch((err) => {
@@ -38,7 +57,7 @@ export function ServiciosMunicipalesPage() {
       });
   }, []);
 
-  if (loading || !data) return <div>Cargando...</div>;
+  if (loading || !data || !medidas || !combinaciones) return <div>Cargando...</div>;
 
   const { cascade } = data;
   const tEncuestados = cascade.total_encuestados || 1;
@@ -49,6 +68,31 @@ export function ServiciosMunicipalesPage() {
   const pctConocenVacunacion = (cascade.conocen_plan_vacunacion / tEncuestados) * 100;
 
   const brechaGeneral = pctConocenCastracion - pctUsanCastracion;
+
+  // Demandas individuales
+  const totalEnc = medidas.total_encuestados || 1;
+  const demandasData = medidas.medidas
+    .filter((m) => m.medida !== 'No es necesaria participación' || m.total > 0)
+    .map((m) => ({
+      name: m.medida,
+      value: m.total,
+      pct: (m.total / totalEnc) * 100,
+      color:
+        m.medida === 'Castraciones masivas'
+          ? '#1B3A4B'
+          : m.medida === 'Educación'
+          ? '#2D8659'
+          : m.medida === 'Control de identificación'
+          ? '#E8913A'
+          : '#6C757D',
+    }));
+
+  // Combinaciones principales (top 5)
+  const combinacionesData = combinaciones.slice(0, 5).map((c, i) => ({
+    name: c.nombre.length > 25 ? c.nombre.substring(0, 25) + '...' : c.nombre,
+    value: c.cantidad,
+    color: ['#1B3A4B', '#234A5E', '#2C5A70', '#2980B9', '#1A6B7A'][i],
+  }));
 
   return (
     <div className={styles.page}>
@@ -78,7 +122,25 @@ export function ServiciosMunicipalesPage() {
         />
       </div>
 
-      {/* Charts row */}
+      {/* Charts row: Demandas + Combinaciones */}
+      <div className={styles.chartsRow}>
+        <HorizontalBarChart
+          title="Medidas Exigidas al Municipio"
+          subtitle="Frecuencia de mención (Respuestas Múltiples)"
+          data={demandasData}
+          xAxisLabel="Número de menciones"
+        />
+        <GroupedBarChart
+          title="Combinaciones Principales de Medidas Demandadas"
+          subtitle="Top 5 combinaciones más frecuentes"
+          data={combinacionesData}
+          bars={[{ key: 'value', name: 'Encuestados', color: '#1B3A4B' }]}
+          xAxisKey="name"
+          yAxisLabel="Número de personas"
+        />
+      </div>
+
+      {/* Existing content: comparison + funnel + table */}
       <div className={styles.chartsRow}>
         {/* Conocimiento vs Uso bar comparison */}
         <Card padding="md" className={styles.comparisonCard}>
@@ -161,7 +223,7 @@ export function ServiciosMunicipalesPage() {
             </thead>
             <tbody>
               {data.tabla_barrios.map((row) => {
-                const brecha = row.pct_conocen_gratis - row.pct_castradas; // Assuming pct_castradas acts as proxy for use
+                const brecha = row.pct_conocen_gratis - row.pct_castradas;
                 const brechaHigh = brecha > 50;
                 return (
                   <tr key={row.barrio}>

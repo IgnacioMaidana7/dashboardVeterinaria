@@ -102,7 +102,6 @@ function ModuleCard({ label, description, icon, colorClass, onNavigate }: Module
   return (
     <Card
       hoverable
-      clickable
       onClick={onNavigate}
       padding="md"
       className={styles.moduleCard}

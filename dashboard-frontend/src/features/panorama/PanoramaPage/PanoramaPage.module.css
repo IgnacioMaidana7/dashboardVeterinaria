@@ -5,272 +5,257 @@
   animation: fadeInUp 0.3s ease both;
 }
 
-/* Top Row */
-.topRow {
+/* ── Filter Bar ── */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-4);
+  width: fit-content;
+}
+
+.filterLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.selectWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select {
+  appearance: none;
+  background: var(--color-gray-50);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  min-width: 200px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.select:hover {
+  border-color: var(--border-emphasis);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-amber-500);
+  box-shadow: 0 0 0 3px rgba(232, 145, 58, 0.15);
+}
+
+.selectIcon {
+  position: absolute;
+  right: var(--space-3);
+  pointer-events: none;
+  color: var(--text-muted);
+}
+
+/* ── Charts Container con animación ── */
+.chartsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.chartsContainer.refreshing {
+  opacity: 0.4;
+  filter: blur(1px);
+  pointer-events: none;
+}
+
+/* ── KPI Row ── */
+.kpiRow {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-4);
 }
 
-/* Total Card */
-.totalCard {
+.kpiCard {
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-5);
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-4);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.totalHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-.totalLabel {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-tertiary);
-  letter-spacing: var(--tracking-wider);
-}
-
-.totalIcon {
-  width: 32px;
-  height: 32px;
-  background: var(--color-gray-100);
-  border-radius: var(--radius-sm);
+.kpiCardIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
-.totalValue {
+.kpiCardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kpiCardLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.kpiCardValue {
   font-family: var(--font-display);
-  font-size: var(--text-4xl);
+  font-size: var(--text-2xl);
   font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: var(--tracking-tight);
+  line-height: 1.2;
+}
+
+/* ── Donut Section ── */
+.donutSection {
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-6);
+}
+
+.donutSection > div {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── Bottom Row ── */
+.bottomRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* ── Demanda Municipal (simple bar) ── */
+.demandaWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-2) 0;
+}
+
+.simpleBarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.simpleBarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.simpleBarTrack {
+  flex: 1;
+  height: 24px;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.simpleBarFill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.simpleBarValue {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  min-width: 48px;
+  text-align: right;
+}
+
+.demandaMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.demandaBig {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.demandaPct {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--color-navy-700);
   line-height: 1;
 }
 
-.totalTrend {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-  color: var(--color-success);
+.demandaLabel {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
-/* Coverage Card */
-.coverageCard {}
-
-.coverageTitle {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-5);
-}
-
-.ringsRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-10);
-}
-
-.ring {
+.demandaSmall {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.ringSvgWrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ringValue {
-  position: absolute;
+.demandaPctSmall {
   font-family: var(--font-display);
-  font-size: var(--text-base);
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--color-gray-400);
+  line-height: 1;
 }
 
-.ringLabel {
+.demandaLabelSmall {
   font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-/* Map Card */
-.mapCard {}
-
-.mapHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-.mapTitle {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.mapLink {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color var(--transition-fast);
-}
-
-.mapLink:hover {
-  color: var(--color-amber-600);
-}
-
-.mapBody {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.mapPlaceholder {
-  position: relative;
-}
-
-.mapSvg {
-  width: 100%;
-  border-radius: var(--radius-md);
-}
-
-.mapTooltip {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  background: var(--color-white);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  box-shadow: var(--shadow-md);
-  z-index: 2;
-  min-width: 160px;
-}
-
-.mapTooltipTitle {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-2);
-}
-
-.mapTooltipTitle span {
-  font-weight: 400;
   color: var(--text-tertiary);
 }
 
-.mapTooltipRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  gap: var(--space-4);
+/* Responsive */
+@media (max-width: 1024px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bottomRow {
+    grid-template-columns: 1fr;
+  }
 }
 
-.highlight {
-  color: var(--color-danger);
-}
-
-/* Stats grid */
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
-}
-
-/* Table */
-.tableCard {}
-
-.tableHeader {
-  padding: var(--space-5) var(--space-6) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.tableTitle {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.tableWrap {
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-
-.table th {
-  padding: var(--space-3) var(--space-6);
-  text-align: left;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
-  background: var(--color-gray-50);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.table td {
-  padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-}
-
-.table tr:last-child td {
-  border-bottom: none;
-}
-
-.table tr:hover td {
-  background: var(--color-gray-50);
-}
-
-.barrio {
-  font-weight: 500;
-  color: var(--text-primary) !important;
-}
-
-/* Progress cell */
-.progressCell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 100px;
-}
-
-.progressCellValue {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.progressCellTrack {
-  height: 3px;
-  background: var(--color-gray-100);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.progressCellBar {
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width 0.6s ease;
+@media (max-width: 640px) {
+  .kpiRow {
+    grid-template-columns: 1fr;
+  }
 }

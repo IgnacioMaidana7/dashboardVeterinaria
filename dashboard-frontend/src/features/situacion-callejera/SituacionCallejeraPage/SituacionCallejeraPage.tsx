@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Eye, EyeOff, CheckCircle, Download } from 'lucide-react';
 import { StatCard, Card, PageHeader, Button } from '@/components/shared';
+import { HorizontalBarChart, DonutChart } from '@/components/charts';
 import styles from './SituacionCallejeraPage.module.css';
 
 interface CallejerosData {
@@ -9,15 +10,24 @@ interface CallejerosData {
   mapa_barrios: { barrio: string; total_respuestas: number; ve_todo_el_tiempo: number }[];
 }
 
+interface EstiloVidaData {
+  estilos: { estilo: string; total: number }[];
+  frecuencia_callejeros: { frecuencia: string; total: number }[];
+}
+
 export function SituacionCallejeraPage() {
   const [data, setData] = useState<CallejerosData | null>(null);
+  const [estiloVida, setEstiloVida] = useState<EstiloVidaData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/stats/page-callejeros')
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
+    Promise.all([
+      fetch('http://localhost:5000/api/stats/page-callejeros').then((r) => r.json()),
+      fetch('http://localhost:5000/api/stats/estilo-vida').then((r) => r.json()),
+    ])
+      .then(([callejeros, estilo]) => {
+        setData(callejeros);
+        setEstiloVida(estilo);
         setLoading(false);
       })
       .catch((err) => {
@@ -26,30 +36,59 @@ export function SituacionCallejeraPage() {
       });
   }, []);
 
-  if (loading || !data) return <div>Cargando...</div>;
+  if (loading || !data || !estiloVida) return <div>Cargando...</div>;
 
   const freqMapping: Record<string, { color: string; icon: React.ReactNode; id: string }> = {
     'Todo el tiempo': { color: '#C0392B', icon: <AlertTriangle size={18} />, id: 'siempre' },
-    'A veces': { color: 'var(--color-amber-500)', icon: <Eye size={18} />, id: 'aveces' },
-    'Raramente': { color: 'var(--color-info)', icon: <EyeOff size={18} />, id: 'raravez' },
-    'Rara vez': { color: 'var(--color-info)', icon: <EyeOff size={18} />, id: 'raravez' },
-    'Nunca': { color: 'var(--color-success)', icon: <CheckCircle size={18} />, id: 'nunca' },
+    'A veces': { color: '#E8913A', icon: <Eye size={18} />, id: 'aveces' },
+    'Raramente': { color: '#2980B9', icon: <EyeOff size={18} />, id: 'raravez' },
+    'Rara vez': { color: '#2980B9', icon: <EyeOff size={18} />, id: 'raravez' },
+    'Nunca': { color: '#2D8659', icon: <CheckCircle size={18} />, id: 'nunca' },
   };
 
-  const freqData = data.frecuencia.map(f => {
+  const freqData = data.frecuencia.map((f) => {
     const meta = freqMapping[f.respuesta] || { color: '#ccc', icon: <Eye size={18} />, id: f.respuesta.toLowerCase().replace(/\s/g, '') };
     return {
       label: f.respuesta,
       value: Math.round(f.porcentaje * 10) / 10,
       color: meta.color,
       icon: meta.icon,
-      id: meta.id
+      id: meta.id,
+    };
+  });
+  freqData.sort((a, b) => b.value - a.value);
+
+  // Estilo de vida
+  const totalRegistros = estiloVida.estilos.reduce((sum, e) => sum + e.total, 0) || 1;
+  const estiloData = estiloVida.estilos.map((e) => {
+    const labelMap: Record<string, string> = {
+      'Salen solos a la calle': 'Salen solos',
+      'Tienen identificador': 'Con identificador',
+      'Viven dentro del hogar': 'Dentro del hogar',
+    };
+    const colorMap: Record<string, string> = {
+      'Salen solos a la calle': '#C0392B',
+      'Tienen identificador': '#2D8659',
+      'Viven dentro del hogar': '#1B3A4B',
+    };
+    return {
+      name: labelMap[e.estilo] || e.estilo,
+      value: e.total,
+      pct: (e.total / totalRegistros) * 100,
+      color: colorMap[e.estilo] || '#6C757D',
     };
   });
 
-  // Sort freqData by typical order or let it be sorted by what we got.
-  // Actually, we can just sort by value descending as a generic fallback.
-  freqData.sort((a, b) => b.value - a.value);
+  // Identificación
+  const conId = estiloVida.estilos.find((e) => e.estilo === 'Tienen identificador')?.total || 0;
+  const sinId = totalRegistros - conId;
+  const identificacionData = [
+    { name: 'Con identificador / placa', value: conId, color: '#2D8659' },
+    { name: 'Sin identificador', value: sinId, color: '#ADB5BD' },
+  ];
+
+  // Callejeros data ya está en freqData
+
 
   return (
     <div className={styles.page}>
@@ -76,9 +115,23 @@ export function SituacionCallejeraPage() {
         ))}
       </div>
 
-      {/* Charts row */}
+      {/* Charts row 1: Estilo de vida + Identificación */}
       <div className={styles.chartsRow}>
-        {/* Stacked bar */}
+        <HorizontalBarChart
+          title="Estilo de Vida de Mascotas: Hábitat Predominante"
+          subtitle="Distribución del hábitat y comportamiento de las mascotas"
+          data={estiloData}
+          xAxisLabel="Número de mascotas / hogares"
+        />
+        <DonutChart
+          title="Mascotas con Identificador/Placa"
+          subtitle="Brecha de identificación en mascotas domésticas"
+          data={identificacionData}
+        />
+      </div>
+
+      {/* Charts row 2: Callejeros + Mapa */}
+      <div className={styles.chartsRow}>
         <Card padding="md" className={styles.barCard}>
           <h3 className={styles.cardTitle}>Distribución de Frecuencia de Avistamientos</h3>
           <p className={styles.cardSub}>
@@ -108,7 +161,6 @@ export function SituacionCallejeraPage() {
           </div>
         </Card>
 
-        {/* Heat map placeholder */}
         <Card padding="md" className={styles.mapCard}>
           <h3 className={styles.cardTitle}>Mapa de Calor Urbano</h3>
           <p className={styles.cardSub}>Zonas de mayor concentración percibida.</p>

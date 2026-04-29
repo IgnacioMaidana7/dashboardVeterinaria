@@ -455,15 +455,22 @@ router.get('/filtros', (req, res) => {
     `).all().map(r => r.ciudad);
 
     const barrios = db.prepare(`
-      SELECT DISTINCT barrio_estandarizado as barrio FROM registros 
-      WHERE barrio_estandarizado IS NOT NULL ORDER BY barrio
+      SELECT barrio_estandarizado as barrio, COUNT(*) as cantidad
+      FROM registros 
+      WHERE barrio_estandarizado IS NOT NULL
+      GROUP BY barrio_estandarizado
+      ORDER BY cantidad DESC, barrio ASC
     `).all().map(r => r.barrio);
 
     const tiposVivienda = db.prepare(`
       SELECT DISTINCT tipo_vivienda FROM registros WHERE tipo_vivienda IS NOT NULL ORDER BY tipo_vivienda
     `).all().map(r => r.tipo_vivienda);
 
-    res.json({ ciudades, barrios, tipos_vivienda: tiposVivienda });
+    const tiposMascota = db.prepare(`
+      SELECT DISTINCT tipo_mascota FROM registros WHERE tipo_mascota IS NOT NULL ORDER BY tipo_mascota
+    `).all().map(r => r.tipo_mascota);
+
+    res.json({ ciudades, barrios, tipos_vivienda: tiposVivienda, tipos_mascota: tiposMascota });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -479,34 +486,44 @@ router.get('/page-resumen', (req, res) => {
     const totales = db.prepare(`
       SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN mascotas_vacunadas = 'Si' THEN 1 ELSE 0 END) as vacunadas,
-        SUM(CASE WHEN mascotas_vacunadas = 'No' THEN 1 ELSE 0 END) as no_vacunadas,
-        SUM(CASE WHEN mascota_castrada = 'Si' THEN 1 ELSE 0 END) as castradas,
-        SUM(CASE WHEN mascota_castrada = 'No' THEN 1 ELSE 0 END) as no_castradas,
-        SUM(CASE WHEN mascotas_desparasitadas = 'Si' THEN 1 ELSE 0 END) as desparasitadas,
-        SUM(CASE WHEN mascotas_desparasitadas = 'No' THEN 1 ELSE 0 END) as no_desparasitadas
+        AVG(integrantes_familia) as promedio_integrantes,
+        COUNT(DISTINCT ciudad) as ciudades_cubiertas
       FROM registros
     `).get();
 
-    const barrios = db.prepare(`
+    const composicion = db.prepare(`
       SELECT 
-        barrio_estandarizado as barrio,
-        COUNT(*) as encuestados,
-        SUM(CASE WHEN mascota_castrada = 'Si' THEN 1 ELSE 0 END) as castradas,
-        SUM(CASE WHEN mascotas_vacunadas = 'Si' THEN 1 ELSE 0 END) as vacunadas,
-        SUM(CASE WHEN mascotas_desparasitadas = 'Si' THEN 1 ELSE 0 END) as desparasitadas
+        SUM(CASE WHEN tiene_perros = 1 AND tiene_gatos = 0 THEN 1 ELSE 0 END) as solo_perros,
+        SUM(CASE WHEN tiene_perros = 0 AND tiene_gatos = 1 THEN 1 ELSE 0 END) as solo_gatos,
+        SUM(CASE WHEN tiene_perros = 1 AND tiene_gatos = 1 THEN 1 ELSE 0 END) as mixto
       FROM registros
-      WHERE barrio_estandarizado IS NOT NULL
-      GROUP BY barrio_estandarizado
-      ORDER BY encuestados DESC
-    `).all();
+    `).get();
+
+    const medidas = db.prepare(`
+      SELECT 
+        SUM(medida_no_necesaria) as no_necesaria,
+        COUNT(*) as total_encuestados
+      FROM registros
+    `).get();
 
     res.json({
       totales: totales.total,
-      tasa_vacunacion: totales.total > 0 ? (totales.vacunadas / (totales.vacunadas + totales.no_vacunadas)) * 100 : 0,
-      tasa_castracion: totales.total > 0 ? (totales.castradas / totales.total) * 100 : 0,
-      tasa_desparasitacion: totales.total > 0 ? (totales.desparasitadas / (totales.desparasitadas + totales.no_desparasitadas)) * 100 : 0,
-      barrios
+      periodo_recoleccion: 'Marzo 2026',
+      ciudades_cubiertas: totales.ciudades_cubiertas,
+      promedio_integrantes: totales.promedio_integrantes ? Math.round(totales.promedio_integrantes * 100) / 100 : 0,
+      composicion_mascotas: {
+        solo_perros: composicion.solo_perros,
+        solo_gatos: composicion.solo_gatos,
+        mixto: composicion.mixto,
+      },
+      demanda_accion: {
+        total: medidas.total_encuestados,
+        demandan: medidas.total_encuestados - medidas.no_necesaria,
+        no_demandan: medidas.no_necesaria,
+        pct_demandan: medidas.total_encuestados > 0
+          ? Math.round(((medidas.total_encuestados - medidas.no_necesaria) / medidas.total_encuestados) * 100)
+          : 0,
+      },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -637,6 +654,335 @@ router.get('/page-municipio', (req, res) => {
         pct_vacunadas: b.total > 0 ? (b.vacunadas / b.total) * 100 : 0,
         pct_conocen_gratis: b.total > 0 ? (b.conocen_gratis / b.total) * 100 : 0,
       }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/stats/integrantes-familia
+// Distribución de integrantes por familia (histograma)
+// ─────────────────────────────────────────────
+router.get('/integrantes-familia', (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT integrantes_familia as integrantes, COUNT(*) as frecuencia
+      FROM registros
+      WHERE integrantes_familia IS NOT NULL AND integrantes_familia > 0
+      GROUP BY integrantes_familia
+      ORDER BY integrantes_familia ASC
+    `).all();
+
+    const stats = db.prepare(`
+      SELECT 
+        AVG(integrantes_familia) as media
+      FROM registros
+      WHERE integrantes_familia IS NOT NULL AND integrantes_familia > 0
+    `).get();
+
+    const allValues = db.prepare(`
+      SELECT integrantes_familia as val
+      FROM registros
+      WHERE integrantes_familia IS NOT NULL AND integrantes_familia > 0
+      ORDER BY integrantes_familia
+    `).all().map(r => r.val);
+    const mid = Math.floor(allValues.length / 2);
+    const mediana = allValues.length % 2 !== 0
+      ? allValues[mid]
+      : (allValues[mid - 1] + allValues[mid]) / 2;
+
+    res.json({
+      distribucion: rows,
+      media: stats.media ? Math.round(stats.media * 100) / 100 : 0,
+      mediana: Math.round(mediana * 100) / 100,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/stats/combinaciones-medidas
+// Combinaciones de medidas exigidas al municipio
+// ─────────────────────────────────────────────
+router.get('/combinaciones-medidas', (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT 
+        medida_castraciones,
+        medida_identificacion,
+        medida_educacion,
+        medida_no_necesaria,
+        COUNT(*) as cantidad
+      FROM registros
+      GROUP BY medida_castraciones, medida_identificacion, medida_educacion, medida_no_necesaria
+      ORDER BY cantidad DESC
+    `).all();
+
+    const combinaciones = rows.map((r) => {
+      const partes = [];
+      if (r.medida_castraciones) partes.push('Castraciones');
+      if (r.medida_identificacion) partes.push('Identificación');
+      if (r.medida_educacion) partes.push('Educación');
+      if (r.medida_no_necesaria) partes.push('No necesaria');
+
+      const nombre =
+        partes.length === 0
+          ? 'Ninguna medida'
+          : partes.length === 1
+          ? partes[0]
+          : partes.length === 4
+          ? 'Todas las medidas'
+          : partes.join(' + ');
+
+      return {
+        nombre,
+        cantidad: r.cantidad,
+        castraciones: r.medida_castraciones,
+        identificacion: r.medida_identificacion,
+        educacion: r.medida_educacion,
+        no_necesaria: r.medida_no_necesaria,
+      };
+    });
+
+    res.json(combinaciones);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/stats/panorama
+// Dashboard completo de Panorama General con filtro opcional por barrio
+// ─────────────────────────────────────────────
+router.get('/panorama', (req, res) => {
+  try {
+    const barrio = req.query.barrio || null;
+    const whereBarrio = barrio ? 'AND barrio_estandarizado = ?' : '';
+    const paramsBarrio = barrio ? [barrio] : [];
+
+    // ── KPIs ──
+    const totales = db.prepare(`
+      SELECT COUNT(*) as total, AVG(integrantes_familia) as promedio_integrantes,
+             COUNT(DISTINCT ciudad) as ciudades_cubiertas
+      FROM registros WHERE 1=1 ${whereBarrio}
+    `).get(...paramsBarrio);
+
+    // ── Composición de mascotas ──
+    const composicion = db.prepare(`
+      SELECT 
+        SUM(CASE WHEN tiene_perros = 1 AND tiene_gatos = 0 THEN 1 ELSE 0 END) as solo_perros,
+        SUM(CASE WHEN tiene_perros = 0 AND tiene_gatos = 1 THEN 1 ELSE 0 END) as solo_gatos,
+        SUM(CASE WHEN tiene_perros = 1 AND tiene_gatos = 1 THEN 1 ELSE 0 END) as mixto
+      FROM registros WHERE 1=1 ${whereBarrio}
+    `).get(...paramsBarrio);
+
+    // ── Demanda de acción municipal ──
+    const medidas = db.prepare(`
+      SELECT SUM(medida_no_necesaria) as no_necesaria, COUNT(*) as total
+      FROM registros WHERE 1=1 ${whereBarrio}
+    `).get(...paramsBarrio);
+
+    // ── Distribución de integrantes ──
+    const distribucion = db.prepare(`
+      SELECT integrantes_familia as integrantes, COUNT(*) as frecuencia
+      FROM registros
+      WHERE integrantes_familia IS NOT NULL AND integrantes_familia > 0 ${whereBarrio}
+      GROUP BY integrantes_familia
+      ORDER BY integrantes_familia ASC
+    `).all(...paramsBarrio);
+
+    // Media y mediana manual
+    const allValues = db.prepare(`
+      SELECT integrantes_familia as val
+      FROM registros
+      WHERE integrantes_familia IS NOT NULL AND integrantes_familia > 0 ${whereBarrio}
+      ORDER BY integrantes_familia
+    `).all(...paramsBarrio).map(r => r.val);
+
+    const media = allValues.length > 0
+      ? Math.round((allValues.reduce((a, b) => a + b, 0) / allValues.length) * 100) / 100
+      : 0;
+    const mid = Math.floor(allValues.length / 2);
+    const mediana = allValues.length > 0
+      ? (allValues.length % 2 !== 0 ? allValues[mid] : (allValues[mid - 1] + allValues[mid]) / 2)
+      : 0;
+
+    // ── Frecuencia callejeros ──
+    const callejerosRows = db.prepare(`
+      SELECT frecuencia_callejeros as respuesta, COUNT(*) as cantidad
+      FROM registros
+      WHERE frecuencia_callejeros IS NOT NULL AND frecuencia_callejeros != '' ${whereBarrio}
+      GROUP BY frecuencia_callejeros
+    `).all(...paramsBarrio);
+
+    const totalCallejeros = callejerosRows.reduce((sum, r) => sum + r.cantidad, 0);
+    const callejeros = callejerosRows.map(r => ({
+      respuesta: r.respuesta,
+      cantidad: r.cantidad,
+      porcentaje: totalCallejeros > 0 ? (r.cantidad / totalCallejeros) * 100 : 0,
+    }));
+
+    // ── Respuesta ──
+    res.json({
+      totales: totales.total,
+      periodo_recoleccion: 'Marzo 2026',
+      ciudades_cubiertas: totales.ciudades_cubiertas,
+      promedio_integrantes: totales.promedio_integrantes ? Math.round(totales.promedio_integrantes * 100) / 100 : 0,
+      composicion_mascotas: {
+        solo_perros: composicion.solo_perros || 0,
+        solo_gatos: composicion.solo_gatos || 0,
+        mixto: composicion.mixto || 0,
+      },
+      demanda_accion: {
+        total: medidas.total || 0,
+        demandan: (medidas.total || 0) - (medidas.no_necesaria || 0),
+        no_demandan: medidas.no_necesaria || 0,
+        pct_demandan: medidas.total > 0
+          ? Math.round(((medidas.total - medidas.no_necesaria) / medidas.total) * 100)
+          : 0,
+      },
+      integrantes: {
+        distribucion,
+        media,
+        mediana: Math.round(mediana * 100) / 100,
+      },
+      callejeros: {
+        total_respuestas: totalCallejeros,
+        frecuencia: callejeros,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/stats/salud-completa
+// Dashboard completo de Salud Animal con filtros
+// Query params: tipo_mascota, ciudad, barrio, tipo_vivienda
+// ─────────────────────────────────────────────
+router.get('/salud-completa', (req, res) => {
+  try {
+    const tipoMascota = req.query.tipo_mascota || null;
+    const ciudad = req.query.ciudad || null;
+    const barrio = req.query.barrio || null;
+    const tipoVivienda = req.query.tipo_vivienda || null;
+
+    let where = 'WHERE 1=1';
+    const params = [];
+
+    if (tipoMascota) { where += ' AND tipo_mascota = ?'; params.push(tipoMascota); }
+    if (ciudad) { where += ' AND ciudad = ?'; params.push(ciudad); }
+    if (barrio) { where += ' AND barrio_estandarizado = ?'; params.push(barrio); }
+    if (tipoVivienda) { where += ' AND tipo_vivienda = ?'; params.push(tipoVivienda); }
+
+    // ── KPIs generales ──
+    const kpis = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN mascotas_vacunadas = 'Si' THEN 1 ELSE 0 END) as vacunadas_si,
+        SUM(CASE WHEN mascota_castrada = 'Si' THEN 1 ELSE 0 END) as castradas_si,
+        SUM(CASE WHEN mascotas_desparasitadas = 'Si' THEN 1 ELSE 0 END) as desparasitadas_si,
+        SUM(CASE WHEN conoce_plan_vacunacion = 'Si' THEN 1 ELSE 0 END) as conoce_plan_si,
+        SUM(CASE WHEN conoce_castracion_gratis = 'Si' THEN 1 ELSE 0 END) as conoce_castracion_gratis_si,
+        SUM(CASE WHEN lugar_castracion_municipio = 1 THEN 1 ELSE 0 END) as uso_municipio,
+        SUM(CASE WHEN lugar_castracion_particular = 1 THEN 1 ELSE 0 END) as uso_privado,
+        SUM(CASE WHEN mascota_castrada = 'Si' THEN 1 ELSE 0 END) as total_castradas
+      FROM registros
+      ${where}
+    `).get(...params);
+
+    const total = kpis.total || 1;
+    const totalCastradas = kpis.total_castradas || 1;
+
+    // ── Vacunación vs Castración (conteos absolutos) ──
+    const vacunacionCastracion = {
+      vacunacion_si: kpis.vacunadas_si || 0,
+      vacunacion_no: total - (kpis.vacunadas_si || 0),
+      castracion_si: kpis.castradas_si || 0,
+      castracion_no: total - (kpis.castradas_si || 0),
+    };
+
+    // ── Vacunación por tipo de mascota ──
+    const vacunacionPorTipoMascota = db.prepare(`
+      SELECT
+        tipo_mascota as tipo,
+        SUM(CASE WHEN mascotas_vacunadas = 'Si' THEN 1 ELSE 0 END) as si,
+        SUM(CASE WHEN mascotas_vacunadas = 'No' THEN 1 ELSE 0 END) as no
+      FROM registros
+      ${where}
+      AND tipo_mascota IS NOT NULL
+      GROUP BY tipo_mascota
+    `).all(...params);
+
+    // ── Castración por tipo de mascota ──
+    const castracionPorTipoMascota = db.prepare(`
+      SELECT
+        tipo_mascota as tipo,
+        SUM(CASE WHEN mascota_castrada = 'Si' THEN 1 ELSE 0 END) as si,
+        SUM(CASE WHEN mascota_castrada = 'No' THEN 1 ELSE 0 END) as no
+      FROM registros
+      ${where}
+      AND tipo_mascota IS NOT NULL
+      GROUP BY tipo_mascota
+    `).all(...params);
+
+    // ── Lugar de castración por tipo de mascota ──
+    const lugarCastracionPorTipoMascota = db.prepare(`
+      SELECT
+        tipo_mascota as tipo,
+        SUM(CASE WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 0 THEN 1 ELSE 0 END) as municipio,
+        SUM(CASE WHEN lugar_castracion_particular = 1 AND lugar_castracion_municipio = 0 THEN 1 ELSE 0 END) as privado,
+        SUM(CASE WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 1 THEN 1 ELSE 0 END) as ambos
+      FROM registros
+      ${where}
+      AND tipo_mascota IS NOT NULL
+      AND mascota_castrada = 'Si'
+      GROUP BY tipo_mascota
+    `).all(...params);
+
+    // ── Vacunación por tipo de vivienda ──
+    const vacunacionPorTipoVivienda = db.prepare(`
+      SELECT
+        tipo_vivienda as tipo,
+        SUM(CASE WHEN mascotas_vacunadas = 'Si' THEN 1 ELSE 0 END) as si,
+        SUM(CASE WHEN mascotas_vacunadas = 'No' THEN 1 ELSE 0 END) as no
+      FROM registros
+      ${where}
+      AND tipo_vivienda IS NOT NULL
+      GROUP BY tipo_vivienda
+    `).all(...params);
+
+    // ── Castración por tipo de vivienda ──
+    const castracionPorTipoVivienda = db.prepare(`
+      SELECT
+        tipo_vivienda as tipo,
+        SUM(CASE WHEN mascota_castrada = 'Si' THEN 1 ELSE 0 END) as si,
+        SUM(CASE WHEN mascota_castrada = 'No' THEN 1 ELSE 0 END) as no
+      FROM registros
+      ${where}
+      AND tipo_vivienda IS NOT NULL
+      GROUP BY tipo_vivienda
+    `).all(...params);
+
+    res.json({
+      kpis: {
+        tasa_vacunacion: total > 0 ? (kpis.vacunadas_si / total) * 100 : 0,
+        tasa_castracion: total > 0 ? (kpis.castradas_si / total) * 100 : 0,
+        tasa_desparasitacion: total > 0 ? (kpis.desparasitadas_si / total) * 100 : 0,
+        conocimiento_plan_vacunacion: total > 0 ? (kpis.conoce_plan_si / total) * 100 : 0,
+        conocimiento_castracion_gratis: total > 0 ? (kpis.conoce_castracion_gratis_si / total) * 100 : 0,
+        participacion_municipal_castraciones: totalCastradas > 0 ? (kpis.uso_municipio / totalCastradas) * 100 : 0,
+        participacion_privado_castraciones: totalCastradas > 0 ? (kpis.uso_privado / totalCastradas) * 100 : 0,
+      },
+      vacunacion_vs_castracion: vacunacionCastracion,
+      vacunacion_por_tipo_mascota: vacunacionPorTipoMascota,
+      castracion_por_tipo_mascota: castracionPorTipoMascota,
+      lugar_castracion_por_tipo_mascota: lugarCastracionPorTipoMascota,
+      vacunacion_por_tipo_vivienda: vacunacionPorTipoVivienda,
+      castracion_por_tipo_vivienda: castracionPorTipoVivienda,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
