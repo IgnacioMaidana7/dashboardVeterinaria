@@ -1,0 +1,1 @@
+export { SaludAnimalPage } from './SaludAnimalPage';

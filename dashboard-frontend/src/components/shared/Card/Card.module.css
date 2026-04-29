@@ -1,0 +1,59 @@
+.card {
+  background: var(--surface-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  transition: 
+    box-shadow var(--transition-base),
+    border-color var(--transition-base),
+    transform var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Variants */
+.variant-default {
+  box-shadow: var(--shadow-card);
+}
+
+.variant-outlined {
+  box-shadow: none;
+  border-color: var(--border-emphasis);
+}
+
+.variant-elevated {
+  box-shadow: var(--shadow-md);
+  border-color: transparent;
+}
+
+.variant-hero {
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, var(--surface-card) 0%, var(--color-gray-50) 100%);
+}
+
+/* Padding */
+.padding-none { padding: 0; }
+.padding-sm { padding: var(--space-4); }
+.padding-md { padding: var(--space-6); }
+.padding-lg { padding: var(--space-8); }
+
+/* Interactive states */
+.hoverable:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-emphasis);
+  transform: translateY(-2px);
+}
+
+.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.clickable:active {
+  transform: translateY(0);
+}
+
+.clickable:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}

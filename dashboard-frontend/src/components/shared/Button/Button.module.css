@@ -1,0 +1,138 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.size-sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  height: 32px;
+}
+
+.size-md {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+  height: 38px;
+}
+
+.size-lg {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-md);
+  height: 44px;
+}
+
+/* Variants */
+.variant-primary {
+  background: var(--color-amber-600);
+  color: var(--color-white);
+}
+
+.variant-primary:hover:not(:disabled) {
+  background: var(--color-amber-700);
+  box-shadow: 0 2px 8px rgba(212, 121, 14, 0.3);
+}
+
+.variant-secondary {
+  background: var(--color-navy-700);
+  color: var(--color-white);
+}
+
+.variant-secondary:hover:not(:disabled) {
+  background: var(--color-navy-800);
+}
+
+.variant-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.variant-ghost:hover:not(:disabled) {
+  background: var(--color-gray-100);
+  color: var(--text-primary);
+}
+
+.variant-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-emphasis);
+}
+
+.variant-outline:hover:not(:disabled) {
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-400);
+}
+
+.variant-danger {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.variant-danger:hover:not(:disabled) {
+  background: #a93226;
+}
+
+/* Icon */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.size-lg .icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Full width */
+.fullWidth {
+  width: 100%;
+}
+
+/* Loading spinner */
+.loading {
+  pointer-events: none;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,103 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  animation: fadeInUp 0.3s ease both;
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.chartsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.cardSub {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-5);
+  line-height: var(--leading-relaxed);
+}
+
+/* Stacked bar */
+.stackedBar {
+  display: flex;
+  height: 36px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-5);
+}
+
+.stackSegment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.stackSegment:hover {
+  opacity: 0.9;
+  filter: brightness(1.05);
+}
+
+.segmentLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Heat map */
+.mapCard {}
+
+.heatMapWrap {
+  margin-top: var(--space-3);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.heatMap {
+  width: 100%;
+}
+
+.heatMapSvg {
+  width: 100%;
+  border-radius: var(--radius-md);
+}

@@ -1,0 +1,1 @@
+export { ServiciosMunicipalesPage } from './ServiciosMunicipalesPage';
