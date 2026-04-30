@@ -5,18 +5,135 @@
   animation: fadeInUp 0.3s ease both;
 }
 
+/* ── Meta row ── */
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.recordCount {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-card);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.warningBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+/* ── Filter Bar ── */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-4);
+  width: fit-content;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.selectWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select {
+  appearance: none;
+  background: var(--color-gray-50);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  min-width: 180px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.select:hover {
+  border-color: var(--border-emphasis);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-amber-500);
+  box-shadow: 0 0 0 3px rgba(232, 145, 58, 0.15);
+}
+
+.selectIcon {
+  position: absolute;
+  right: var(--space-3);
+  pointer-events: none;
+  color: var(--text-muted);
+}
+
+/* ── Charts Container con animación ── */
+.chartsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.chartsContainer.refreshing {
+  opacity: 0.4;
+  filter: blur(1px);
+  pointer-events: none;
+}
+
+/* KPI row: 6 columnas */
 .kpiRow {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-4);
 }
 
+/* Charts row */
 .chartsRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
 }
 
+.chartsRowSingle {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.chartLarge {
+  min-height: 320px;
+}
+
+/* Card titles (legacy) */
 .cardTitle {
   font-family: var(--font-display);
   font-size: var(--text-lg);
@@ -32,7 +149,7 @@
   line-height: var(--leading-relaxed);
 }
 
-/* Stacked bar */
+/* Stacked bar (legacy) */
 .stackedBar {
   display: flex;
   height: 36px;
@@ -84,7 +201,7 @@
   flex-shrink: 0;
 }
 
-/* Heat map */
+/* Heat map (legacy) */
 .mapCard {}
 
 .heatMapWrap {
@@ -100,4 +217,66 @@
 .heatMapSvg {
   width: 100%;
   border-radius: var(--radius-md);
+}
+
+/* Error box */
+.errorBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  padding: var(--space-8);
+  color: #991b1b;
+  text-align: center;
+}
+
+.retryBtn {
+  appearance: none;
+  background: var(--color-navy-700);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-6);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.retryBtn:hover {
+  background: var(--color-navy-800);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpiRow {
+    grid-template-columns: 1fr;
+  }
+  .filterBar {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .select {
+    width: 100%;
+  }
 }

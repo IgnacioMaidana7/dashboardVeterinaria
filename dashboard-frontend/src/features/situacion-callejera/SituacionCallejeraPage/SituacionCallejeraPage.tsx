@@ -1,100 +1,271 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Eye, EyeOff, CheckCircle, Download } from 'lucide-react';
-import { StatCard, Card, PageHeader, Button } from '@/components/shared';
-import { HorizontalBarChart, DonutChart } from '@/components/charts';
+import {
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  Download,
+  Filter,
+  ChevronDown,
+  MapPin,
+  Dog,
+  Activity,
+} from 'lucide-react';
+import { StatCard, PageHeader, Button } from '@/components/shared';
+import { HorizontalBarChart, GroupedBarChart } from '@/components/charts';
 import styles from './SituacionCallejeraPage.module.css';
 
-interface CallejerosData {
+interface CallejerosCompletoData {
   total_respuestas: number;
-  frecuencia: { respuesta: string; cantidad: number; porcentaje: number }[];
-  mapa_barrios: { barrio: string; total_respuestas: number; ve_todo_el_tiempo: number }[];
+  kpis: {
+    pct_avistan: number;
+    pct_todo_el_tiempo: number;
+    pct_nunca: number;
+    pct_animal_perros: number;
+    pct_animal_gatos: number;
+    barrio_mayor_avistamiento: string;
+    pct_exigen_medidas_de_avistan: number;
+  };
+  frecuencia_avistamiento: { respuesta: string; cantidad: number; porcentaje: number }[];
+  tipo_animal_reportado: { tipo: string; cantidad: number; porcentaje: number }[];
+  frecuencia_por_barrio: {
+    barrio: string;
+    todo_el_tiempo: number;
+    a_veces: number;
+    nunca: number;
+    raramente: number;
+    total: number;
+  }[];
+  tipo_animal_por_barrio: {
+    barrio: string;
+    perros: number;
+    gatos: number;
+    ambos: number;
+    total: number;
+  }[];
+  frecuencia_por_ciudad: {
+    ciudad: string;
+    todo_el_tiempo: number;
+    a_veces: number;
+    nunca: number;
+    raramente: number;
+    total: number;
+  }[];
+  frecuencia_por_tipo_vivienda: {
+    tipo_vivienda: string;
+    todo_el_tiempo: number;
+    a_veces: number;
+    nunca: number;
+    raramente: number;
+    total: number;
+  }[];
+  tipo_animal_por_tipo_vivienda: {
+    tipo_vivienda: string;
+    perros: number;
+    gatos: number;
+    ambos: number;
+    total: number;
+  }[];
+  avistamiento_vs_medidas: {
+    frecuencia: string;
+    total: number;
+    exigen_medidas: number;
+    pct_exigen: number;
+  }[];
+  mapa_barrios: {
+    barrio: string;
+    total_respuestas: number;
+    todo_el_tiempo: number;
+    avistan: number;
+    intensidad: number;
+  }[];
+  filtros_disponibles: {
+    ciudades: string[];
+    barrios: string[];
+    tipos_vivienda: string[];
+  };
 }
 
-interface EstiloVidaData {
-  estilos: { estilo: string; total: number }[];
-  frecuencia_callejeros: { frecuencia: string; total: number }[];
-}
+const COLOR_TODO_TIEMPO = '#C0392B';
+const COLOR_A_VECES = '#E8913A';
+const COLOR_NUNCA = '#2D8659';
+const COLOR_RARAMENTE = '#2980B9';
 
 export function SituacionCallejeraPage() {
-  const [data, setData] = useState<CallejerosData | null>(null);
-  const [estiloVida, setEstiloVida] = useState<EstiloVidaData | null>(null);
+  const [data, setData] = useState<CallejerosCompletoData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Filtros
+  const [tipoAnimal, setTipoAnimal] = useState('');
+  const [frecuencia, setFrecuencia] = useState('');
+  const [ciudad, setCiudad] = useState('');
+  const [tipoVivienda, setTipoVivienda] = useState('');
+  const [barrio, setBarrio] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Cargar datos cuando cambian los filtros
   useEffect(() => {
-    Promise.all([
-      fetch('http://localhost:5000/api/stats/page-callejeros').then((r) => r.json()),
-      fetch('http://localhost:5000/api/stats/estilo-vida').then((r) => r.json()),
-    ])
-      .then(([callejeros, estilo]) => {
-        setData(callejeros);
-        setEstiloVida(estilo);
+    setLoading(true);
+    setErrorMsg(null);
+    const params = new URLSearchParams();
+    if (tipoAnimal) params.append('tipo_animal', tipoAnimal);
+    if (frecuencia) params.append('frecuencia', frecuencia);
+    if (ciudad) params.append('ciudad', ciudad);
+    if (tipoVivienda) params.append('tipo_vivienda', tipoVivienda);
+    if (barrio) params.append('barrio', barrio);
+
+    const url = `http://localhost:5000/api/stats/callejeros-completa?${params.toString()}`;
+
+    fetch(url)
+      .then(async (r) => {
+        const json = await r.json();
+        if (!r.ok || json.error) {
+          throw new Error(json.error || `Error ${r.status}`);
+        }
+        return json as CallejerosCompletoData;
+      })
+      .then((json) => {
+        setData(json);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Error fetching data:', err);
+        setErrorMsg(err.message || 'Error al cargar los datos');
         setLoading(false);
       });
-  }, []);
+  }, [tipoAnimal, frecuencia, ciudad, tipoVivienda, barrio, retryCount]);
 
-  if (loading || !data || !estiloVida) return <div>Cargando...</div>;
-
-  const freqMapping: Record<string, { color: string; icon: React.ReactNode; id: string }> = {
-    'Todo el tiempo': { color: '#C0392B', icon: <AlertTriangle size={18} />, id: 'siempre' },
-    'A veces': { color: '#E8913A', icon: <Eye size={18} />, id: 'aveces' },
-    'Raramente': { color: '#2980B9', icon: <EyeOff size={18} />, id: 'raravez' },
-    'Rara vez': { color: '#2980B9', icon: <EyeOff size={18} />, id: 'raravez' },
-    'Nunca': { color: '#2D8659', icon: <CheckCircle size={18} />, id: 'nunca' },
+  const handleFilterChange = (setter: (val: string) => void, val: string) => {
+    setRefreshing(true);
+    setter(val);
+    setTimeout(() => setRefreshing(false), 600);
   };
 
-  const freqData = data.frecuencia.map((f) => {
-    const meta = freqMapping[f.respuesta] || { color: '#ccc', icon: <Eye size={18} />, id: f.respuesta.toLowerCase().replace(/\s/g, '') };
-    return {
-      label: f.respuesta,
-      value: Math.round(f.porcentaje * 10) / 10,
-      color: meta.color,
-      icon: meta.icon,
-      id: meta.id,
-    };
-  });
-  freqData.sort((a, b) => b.value - a.value);
+  if (loading) return <div>Cargando...</div>;
+  if (errorMsg) {
+    return (
+      <div className={styles.page}>
+        <PageHeader title="Percepción de Animales en Situación de Calle" />
+        <div className={styles.errorBox}>
+          <AlertTriangle size={24} />
+          <p>Error al cargar los datos: {errorMsg}</p>
+          <button
+            className={styles.retryBtn}
+            onClick={() => {
+              setRetryCount((c) => c + 1);
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (!data) return <div>Sin datos disponibles</div>;
 
-  // Estilo de vida
-  const totalRegistros = estiloVida.estilos.reduce((sum, e) => sum + e.total, 0) || 1;
-  const estiloData = estiloVida.estilos.map((e) => {
-    const labelMap: Record<string, string> = {
-      'Salen solos a la calle': 'Salen solos',
-      'Tienen identificador': 'Con identificador',
-      'Viven dentro del hogar': 'Dentro del hogar',
-    };
-    const colorMap: Record<string, string> = {
-      'Salen solos a la calle': '#C0392B',
-      'Tienen identificador': '#2D8659',
-      'Viven dentro del hogar': '#1B3A4B',
-    };
-    return {
-      name: labelMap[e.estilo] || e.estilo,
-      value: e.total,
-      pct: (e.total / totalRegistros) * 100,
-      color: colorMap[e.estilo] || '#6C757D',
-    };
-  });
+  const { kpis, total_respuestas } = data;
+  const pocosDatos = total_respuestas < 30;
 
-  // Identificación
-  const conId = estiloVida.estilos.find((e) => e.estilo === 'Tienen identificador')?.total || 0;
-  const sinId = totalRegistros - conId;
-  const identificacionData = [
-    { name: 'Con identificador / placa', value: conId, color: '#2D8659' },
-    { name: 'Sin identificador', value: sinId, color: '#ADB5BD' },
-  ];
+  // ── Datos para gráficos ──
 
-  // Callejeros data ya está en freqData
+  // 1. Frecuencia de avistamiento (barras horizontales grandes)
+  const frecuenciaChartData = data.frecuencia_avistamiento.map((f) => ({
+    name: f.respuesta,
+    value: f.porcentaje,
+    pct: f.porcentaje,
+    color:
+      f.respuesta === 'Todo el tiempo'
+        ? COLOR_TODO_TIEMPO
+        : f.respuesta === 'A veces'
+        ? COLOR_A_VECES
+        : f.respuesta === 'Nunca'
+        ? COLOR_NUNCA
+        : COLOR_RARAMENTE,
+  }));
 
+  // 2. Tipo de animal callejero más reportado
+  const tipoAnimalChartData = data.tipo_animal_reportado.map((t) => ({
+    name: t.tipo,
+    value: t.porcentaje,
+    pct: t.porcentaje,
+    color:
+      t.tipo === 'Perros'
+        ? '#1B3A4B'
+        : t.tipo === 'Gatos'
+        ? '#E8913A'
+        : '#2D8659',
+  }));
+
+  // 3. Frecuencia por barrio (top 12)
+  const frecuenciaPorBarrioData = data.frecuencia_por_barrio.map((b) => ({
+    name: b.barrio,
+    'Todo el tiempo': b.todo_el_tiempo,
+    'A veces': b.a_veces,
+    Nunca: b.nunca,
+    Raramente: b.raramente,
+  }));
+
+  // 4. Tipo de animal por barrio (top 10)
+  const tipoAnimalPorBarrioData = data.tipo_animal_por_barrio.map((b) => ({
+    name: b.barrio,
+    Perros: b.perros,
+    Gatos: b.gatos,
+    Ambos: b.ambos,
+  }));
+
+  // 5. Frecuencia por tipo de vivienda
+  const frecuenciaPorTipoViviendaData = data.frecuencia_por_tipo_vivienda.map((v) => ({
+    name: v.tipo_vivienda,
+    'Todo el tiempo': v.todo_el_tiempo,
+    'A veces': v.a_veces,
+    Nunca: v.nunca,
+    Raramente: v.raramente,
+  }));
+
+  // 6. Frecuencia por ciudad
+  const frecuenciaPorCiudadData = data.frecuencia_por_ciudad.map((c) => ({
+    name: c.ciudad,
+    'Todo el tiempo': c.todo_el_tiempo,
+    'A veces': c.a_veces,
+    Nunca: c.nunca,
+    Raramente: c.raramente,
+  }));
+
+  // 7. Tipo de animal por tipo de vivienda
+  const tipoAnimalPorTipoViviendaData = data.tipo_animal_por_tipo_vivienda.map((v) => ({
+    name: v.tipo_vivienda,
+    Perros: v.perros,
+    Gatos: v.gatos,
+    Ambos: v.ambos,
+  }));
+
+  // 8. Relación avistamiento vs demanda de medidas
+  const avistamientoVsMedidasData = data.avistamiento_vs_medidas.map((a) => ({
+    name: a.frecuencia,
+    'Exigen medidas': a.exigen_medidas,
+    'No exigen': a.total - a.exigen_medidas,
+  }));
+
+  // Título dinámico según filtros
+  const filtrosActivos = [
+    tipoAnimal && `Animal: ${tipoAnimal}`,
+    frecuencia && `Frecuencia: ${frecuencia}`,
+    ciudad && `Ciudad: ${ciudad}`,
+    tipoVivienda && `Vivienda: ${tipoVivienda}`,
+    barrio && `Barrio: ${barrio}`,
+  ].filter(Boolean);
+
+  const tituloDinamico =
+    filtrosActivos.length > 0
+      ? `Situación Callejera — ${filtrosActivos.join(' · ')}`
+      : 'Situación Callejera — Panorama General';
 
   return (
     <div className={styles.page}>
       <PageHeader
         title="Percepción de Animales en Situación de Calle"
-        subtitle="Análisis de la frecuencia de avistamientos reportados por los ciudadanos en la zona metropolitana."
+        subtitle={tituloDinamico}
         actions={
           <Button variant="outline" size="sm" icon={<Download size={14} />} id="btn-exportar-pdf-calle">
             Exportar PDF
@@ -102,107 +273,267 @@ export function SituacionCallejeraPage() {
         }
       />
 
-      {/* KPI stat cards */}
-      <div className={styles.kpiRow}>
-        {freqData.map((item) => (
+      {/* Contador de registros y advertencia */}
+      <div className={styles.metaRow}>
+        <span className={styles.recordCount}>N = {total_respuestas} registros</span>
+        {pocosDatos && (
+          <span className={styles.warningBadge}>
+            <AlertTriangle size={12} />
+            Pocos datos — interpretar con precaución
+          </span>
+        )}
+      </div>
+
+      {/* Filtros dinámicos */}
+      <div className={styles.filterBar}>
+        <div className={styles.filterLabel}>
+          <Filter size={14} />
+          <span>Filtrar por</span>
+        </div>
+
+        <div className={styles.selectWrap}>
+          <select
+            className={styles.select}
+            value={tipoAnimal}
+            onChange={(e) => handleFilterChange(setTipoAnimal, e.target.value)}
+          >
+            <option value="">Todos los animales</option>
+            <option value="perros">Perros</option>
+            <option value="gatos">Gatos</option>
+            <option value="ambos">Ambos</option>
+          </select>
+          <ChevronDown size={14} className={styles.selectIcon} />
+        </div>
+
+        <div className={styles.selectWrap}>
+          <select
+            className={styles.select}
+            value={frecuencia}
+            onChange={(e) => handleFilterChange(setFrecuencia, e.target.value)}
+          >
+            <option value="">Todas las frecuencias</option>
+            <option value="todo_el_tiempo">Todo el tiempo</option>
+            <option value="a_veces">A veces</option>
+            <option value="nunca">Nunca</option>
+            <option value="raramente">Raramente</option>
+          </select>
+          <ChevronDown size={14} className={styles.selectIcon} />
+        </div>
+
+        <div className={styles.selectWrap}>
+          <select
+            className={styles.select}
+            value={ciudad}
+            onChange={(e) => handleFilterChange(setCiudad, e.target.value)}
+          >
+            <option value="">Todas las ciudades</option>
+            {data.filtros_disponibles.ciudades.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={14} className={styles.selectIcon} />
+        </div>
+
+        <div className={styles.selectWrap}>
+          <select
+            className={styles.select}
+            value={tipoVivienda}
+            onChange={(e) => handleFilterChange(setTipoVivienda, e.target.value)}
+          >
+            <option value="">Todos los tipos de vivienda</option>
+            {data.filtros_disponibles.tipos_vivienda.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={14} className={styles.selectIcon} />
+        </div>
+
+        <div className={styles.selectWrap}>
+          <select
+            className={styles.select}
+            value={barrio}
+            onChange={(e) => handleFilterChange(setBarrio, e.target.value)}
+          >
+            <option value="">Todos los barrios</option>
+            {data.filtros_disponibles.barrios.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={14} className={styles.selectIcon} />
+        </div>
+      </div>
+
+      {/* Contenido con animación */}
+      <div className={`${styles.chartsContainer} ${refreshing ? styles.refreshing : ''}`}>
+        {/* KPIs */}
+        <div className={styles.kpiRow}>
           <StatCard
-            key={item.id}
-            id={`stat-calle-${item.id}`}
-            label={`Avistamiento: ${item.label}`}
-            value={`${item.value}%`}
-            progressBar={{ value: item.value, color: item.color }}
+            id="stat-calle-avistan"
+            label="Ciudadanos que Avistan Animales Callejeros"
+            value={`${kpis.pct_avistan}%`}
+            icon={<Eye size={16} />}
+            iconColor="danger"
+            progressBar={{ value: kpis.pct_avistan, color: COLOR_TODO_TIEMPO }}
+            badge={{ text: "Suma de 'Todo el tiempo' + 'A veces'", variant: 'neutral' }}
           />
-        ))}
-      </div>
+          <StatCard
+            id="stat-calle-predominante"
+            label='Frecuencia Predominante: "Todo el tiempo"'
+            value={`${kpis.pct_todo_el_tiempo}%`}
+            icon={<AlertTriangle size={16} />}
+            iconColor="warning"
+            progressBar={{ value: kpis.pct_todo_el_tiempo, color: COLOR_A_VECES }}
+            badge={{ text: 'Percepción de problema constante', variant: 'warning' }}
+          />
+          <StatCard
+            id="stat-calle-animal"
+            label="Animal Callejero Más Reportado: Perros"
+            value={`${kpis.pct_animal_perros}%`}
+            icon={<Dog size={16} />}
+            iconColor="navy"
+            progressBar={{ value: kpis.pct_animal_perros, color: '#1B3A4B' }}
+            badge={{ text: 'Vs Gatos y mixtos', variant: 'info' }}
+          />
+          <StatCard
+            id="stat-calle-nunca"
+            label="Ciudadanos que NUNCA ven animales callejeros"
+            value={`${kpis.pct_nunca}%`}
+            icon={<EyeOff size={16} />}
+            iconColor="success"
+            progressBar={{ value: kpis.pct_nunca, color: COLOR_NUNCA }}
+            badge={{ text: 'Contraste: zonas sin problema percibido', variant: 'success' }}
+          />
+          <StatCard
+            id="stat-calle-barrio"
+            label="Zona de Mayor Avistamiento (Barrio)"
+            value={kpis.barrio_mayor_avistamiento}
+            icon={<MapPin size={16} />}
+            iconColor="info"
+            badge={{ text: 'Identificar puntos críticos', variant: 'info' }}
+          />
+          <StatCard
+            id="stat-calle-accion"
+            label="Relación Problemática/Acción"
+            value={`${kpis.pct_exigen_medidas_de_avistan}%`}
+            icon={<Activity size={16} />}
+            iconColor="amber"
+            progressBar={{ value: kpis.pct_exigen_medidas_de_avistan, color: '#E8913A' }}
+            badge={{ text: 'Correlación demanda-percepción', variant: 'neutral' }}
+          />
+        </div>
 
-      {/* Charts row 1: Estilo de vida + Identificación */}
-      <div className={styles.chartsRow}>
-        <HorizontalBarChart
-          title="Estilo de Vida de Mascotas: Hábitat Predominante"
-          subtitle="Distribución del hábitat y comportamiento de las mascotas"
-          data={estiloData}
-          xAxisLabel="Número de mascotas / hogares"
-        />
-        <DonutChart
-          title="Mascotas con Identificador/Placa"
-          subtitle="Brecha de identificación en mascotas domésticas"
-          data={identificacionData}
-        />
-      </div>
-
-      {/* Charts row 2: Callejeros + Mapa */}
-      <div className={styles.chartsRow}>
-        <Card padding="md" className={styles.barCard}>
-          <h3 className={styles.cardTitle}>Distribución de Frecuencia de Avistamientos</h3>
-          <p className={styles.cardSub}>
-            Porcentaje de respuestas ciudadanas respecto a la presencia de animales abandonados.
-          </p>
-          <div className={styles.stackedBar}>
-            {freqData.map((item) => (
-              <div
-                key={item.id}
-                className={styles.stackSegment}
-                style={{ width: `${item.value}%`, backgroundColor: item.color }}
-                title={`${item.label}: ${item.value}%`}
-              >
-                {item.value > 15 && (
-                  <span className={styles.segmentLabel}>{item.value}%</span>
-                )}
-              </div>
-            ))}
+        {/* Charts row 1: Frecuencia general + Tipo animal */}
+        <div className={styles.chartsRow}>
+          <div className={styles.chartLarge}>
+            <HorizontalBarChart
+              title="Frecuencia de Avistamiento de Animales Callejeros"
+              subtitle="Panorama general de percepción ciudadana"
+              data={frecuenciaChartData}
+              xAxisLabel="Porcentaje de respuestas (%)"
+              valueFormatter={(value) => `${Number(value).toFixed(1)}%`}
+            />
           </div>
-          <div className={styles.legend}>
-            {freqData.map((item) => (
-              <div key={item.id} className={styles.legendItem}>
-                <div className={styles.legendDot} style={{ backgroundColor: item.color }} />
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
+          <HorizontalBarChart
+            title="Tipo de Animal Callejero Más Reportado"
+            subtitle="Distribución por especie reportada"
+            data={tipoAnimalChartData}
+            xAxisLabel="Porcentaje de reportes (%)"
+            valueFormatter={(value) => `${Number(value).toFixed(1)}%`}
+          />
+        </div>
 
-        <Card padding="md" className={styles.mapCard}>
-          <h3 className={styles.cardTitle}>Mapa de Calor Urbano</h3>
-          <p className={styles.cardSub}>Zonas de mayor concentración percibida.</p>
-          <div className={styles.heatMapWrap}>
-            <HeatMapPlaceholder />
-          </div>
-        </Card>
+        {/* Charts row 2: Frecuencia por barrio + Tipo animal por barrio */}
+        <div className={styles.chartsRow}>
+          <GroupedBarChart
+            title="Frecuencia de Avistamiento por Barrio"
+            subtitle="Top barrios con mayor intensidad de problema"
+            data={frecuenciaPorBarrioData}
+            bars={[
+              { key: 'Todo el tiempo', name: 'Todo el tiempo', color: COLOR_TODO_TIEMPO },
+              { key: 'A veces', name: 'A veces', color: COLOR_A_VECES },
+              { key: 'Nunca', name: 'Nunca', color: COLOR_NUNCA },
+              { key: 'Raramente', name: 'Raramente', color: COLOR_RARAMENTE },
+            ]}
+            xAxisKey="name"
+            yAxisLabel="Número de respuestas"
+          />
+          <GroupedBarChart
+            title="Tipo de Animal Callejero Reportado por Barrio"
+            subtitle="Variación del tipo de animal según zona"
+            data={tipoAnimalPorBarrioData}
+            bars={[
+              { key: 'Perros', name: 'Perros', color: '#1B3A4B' },
+              { key: 'Gatos', name: 'Gatos', color: '#E8913A' },
+              { key: 'Ambos', name: 'Ambos', color: '#2D8659' },
+            ]}
+            xAxisKey="name"
+            yAxisLabel="Número de reportes"
+          />
+        </div>
+
+        {/* Charts row 3: Frecuencia por ciudad + Frecuencia por tipo vivienda */}
+        <div className={styles.chartsRow}>
+          <GroupedBarChart
+            title="Frecuencia de Avistamiento por Ciudad"
+            subtitle="Variación geográfica del problema"
+            data={frecuenciaPorCiudadData}
+            bars={[
+              { key: 'Todo el tiempo', name: 'Todo el tiempo', color: COLOR_TODO_TIEMPO },
+              { key: 'A veces', name: 'A veces', color: COLOR_A_VECES },
+              { key: 'Nunca', name: 'Nunca', color: COLOR_NUNCA },
+              { key: 'Raramente', name: 'Raramente', color: COLOR_RARAMENTE },
+            ]}
+            xAxisKey="name"
+            yAxisLabel="Número de respuestas"
+          />
+          <GroupedBarChart
+            title="Frecuencia de Avistamiento por Tipo de Vivienda"
+            subtitle="Impacto según contexto habitacional"
+            data={frecuenciaPorTipoViviendaData}
+            bars={[
+              { key: 'Todo el tiempo', name: 'Todo el tiempo', color: COLOR_TODO_TIEMPO },
+              { key: 'A veces', name: 'A veces', color: COLOR_A_VECES },
+              { key: 'Nunca', name: 'Nunca', color: COLOR_NUNCA },
+              { key: 'Raramente', name: 'Raramente', color: COLOR_RARAMENTE },
+            ]}
+            xAxisKey="name"
+            yAxisLabel="Número de respuestas"
+          />
+        </div>
+
+        {/* Charts row 4: Tipo animal por vivienda + Relación avistamiento vs demanda */}
+        <div className={styles.chartsRow}>
+          <GroupedBarChart
+            title="Tipo de Animal por Tipo de Vivienda"
+            subtitle="Preferencia de especie según tipo de hogar"
+            data={tipoAnimalPorTipoViviendaData}
+            bars={[
+              { key: 'Perros', name: 'Perros', color: '#1B3A4B' },
+              { key: 'Gatos', name: 'Gatos', color: '#E8913A' },
+              { key: 'Ambos', name: 'Ambos', color: '#2D8659' },
+            ]}
+            xAxisKey="name"
+            yAxisLabel="Número de reportes"
+          />
+          <GroupedBarChart
+            title="Relación: Avistamiento vs Demanda de Medidas"
+            subtitle="Correlación entre percepción y exigencia de acción municipal"
+            data={avistamientoVsMedidasData}
+            bars={[
+              { key: 'Exigen medidas', name: 'Exigen medidas', color: COLOR_TODO_TIEMPO },
+              { key: 'No exigen', name: 'No exigen', color: '#ADB5BD' },
+            ]}
+            xAxisKey="name"
+            yAxisLabel="Número de ciudadanos"
+          />
+        </div>
       </div>
-    </div>
-  );
-}
-
-function HeatMapPlaceholder() {
-  return (
-    <div className={styles.heatMap}>
-      <svg viewBox="0 0 300 200" className={styles.heatMapSvg} aria-label="Mapa de calor urbano">
-        <rect width="300" height="200" fill="#2a3a4a" rx="8" />
-        {/* Street grid */}
-        {Array.from({ length: 15 }).map((_, i) => (
-          <line key={`h${i}`} x1="0" y1={i * 14} x2="300" y2={i * 14} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
-        ))}
-        {Array.from({ length: 22 }).map((_, i) => (
-          <line key={`v${i}`} x1={i * 14} y1="0" x2={i * 14} y2="200" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
-        ))}
-        {/* Heat spots */}
-        <radialGradient id="heat1" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#C0392B" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#C0392B" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="heat2" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#E8913A" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#E8913A" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="heat3" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#F5C48A" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#F5C48A" stopOpacity="0" />
-        </radialGradient>
-        <circle cx="150" cy="90" r="55" fill="url(#heat1)" />
-        <circle cx="210" cy="60" r="35" fill="url(#heat2)" />
-        <circle cx="90" cy="130" r="40" fill="url(#heat3)" />
-        <circle cx="240" cy="140" r="28" fill="url(#heat2)" opacity="0.6" />
-      </svg>
     </div>
   );
 }
