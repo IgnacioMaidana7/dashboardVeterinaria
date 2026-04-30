@@ -5,18 +5,95 @@
   animation: fadeInUp 0.3s ease both;
 }
 
+/* ── Filter Bar ── */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-4);
+  width: fit-content;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.selectWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select {
+  appearance: none;
+  background: var(--color-gray-50);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  min-width: 180px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.select:hover {
+  border-color: var(--border-emphasis);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--color-amber-500);
+  box-shadow: 0 0 0 3px rgba(232, 145, 58, 0.15);
+}
+
+.selectIcon {
+  position: absolute;
+  right: var(--space-3);
+  pointer-events: none;
+  color: var(--text-muted);
+}
+
+/* ── Charts Container con animación ── */
+.chartsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.chartsContainer.refreshing {
+  opacity: 0.4;
+  filter: blur(1px);
+  pointer-events: none;
+}
+
+/* KPI row */
 .kpiRow {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-4);
 }
 
+/* Charts row */
 .chartsRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
 }
 
+/* Card header */
 .cardHeader {
   display: flex;
   align-items: flex-start;
@@ -31,93 +108,13 @@
   color: var(--text-primary);
 }
 
-.menuBtn {
-  color: var(--text-muted);
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.menuBtn:hover {
-  background: var(--color-gray-100);
-  color: var(--text-secondary);
-}
-
-/* Comparison bars */
-.comparisonCard {}
-
-.compBars {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: var(--space-6);
-  height: 180px;
-  padding: var(--space-4) 0;
-}
-
-.compBarGroup {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1;
-  max-width: 80px;
-  height: 100%;
-}
-
-.compBarWrap {
-  flex: 1;
-  width: 56px;
-  background: var(--color-gray-100);
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-}
-
-.compBarFill {
-  width: 100%;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  transition: height 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.compBarValue {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.compBarLabel {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  text-align: center;
-}
-
-.compArrow {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  margin-bottom: var(--space-8);
-}
-
-.compDelta {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--color-danger);
-}
-
 /* Funnel */
 .funnelCard {}
 
 .funnel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .funnelStep {
@@ -126,38 +123,36 @@
   gap: 4px;
 }
 
-.funnelBar {
-  height: 8px;
+.funnelBarTrack {
+  height: 28px;
   background: var(--color-gray-100);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
-.funnelFill {
+.funnelBarFill {
   height: 100%;
-  background: var(--color-gray-300);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   transition: width 0.7s ease;
-}
-
-.funnelHighlight {
-  background: var(--color-amber-500);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-2);
 }
 
 .funnelMeta {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 var(--space-1);
 }
 
 .funnelValue {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.funnelValueHighlight {
-  color: var(--color-amber-600);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .funnelLabel {
@@ -165,64 +160,85 @@
   color: var(--text-tertiary);
 }
 
-/* Table */
-.tableHeader {
+.funnelArrow {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-5) var(--space-6) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
+  justify-content: center;
+  padding: var(--space-1) 0;
 }
 
-.tableTitle {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.tableWrap {
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-
-.table th {
-  padding: var(--space-3) var(--space-5);
-  text-align: left;
+.funnelLoss {
   font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
-  background: var(--color-gray-50);
-  border-bottom: 1px solid var(--border-subtle);
-  white-space: nowrap;
+  color: var(--color-danger);
+  background: var(--color-danger-light, #fdeaea);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
 }
 
-.table td {
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+/* Insights */
+.insightCard {}
+
+.insightsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.table tr:last-child td { border-bottom: none; }
-.table tr:hover td { background: var(--color-gray-50); }
-
-.barrioCell {
-  font-weight: 500;
-  color: var(--text-primary) !important;
+.insightItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
 }
 
-.brechaHigh {
-  color: var(--color-amber-600) !important;
+.insightIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.insightLabel {
+  font-size: var(--text-sm);
   font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
 }
 
-.brechaMid {
-  color: var(--text-secondary) !important;
+.insightValue {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .kpiRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .kpiRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpiRow {
+    grid-template-columns: 1fr;
+  }
+  .filterBar {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .select {
+    width: 100%;
+  }
 }
