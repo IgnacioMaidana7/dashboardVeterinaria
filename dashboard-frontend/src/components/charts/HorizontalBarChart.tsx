@@ -19,6 +19,7 @@ interface HorizontalBarChartProps {
   valueFormatter?: (value: number, entry: any) => string;
   className?: string;
   xAxisLabel?: string;
+  height?: number;
 }
 
 const DEFAULT_COLORS = [
@@ -39,13 +40,14 @@ export function HorizontalBarChart({
   valueFormatter,
   className,
   xAxisLabel,
+  height = 300,
 }: HorizontalBarChartProps) {
   const sorted = [...data].sort((a, b) => a.value - b.value);
 
   return (
     <ChartCard title={title} subtitle={subtitle} className={className}>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={sorted} layout="vertical" barCategoryGap="20%" margin={{ left: 20, right: 30 }}>
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart data={sorted} layout="vertical" barCategoryGap="20%" margin={{ left: 20, right: 30, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
           <XAxis
             type="number"
@@ -64,7 +66,7 @@ export function HorizontalBarChart({
             tick={{ fontSize: 12, fill: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}
             axisLine={false}
             tickLine={false}
-            width={120}
+            width={150}
           />
           <Tooltip
             formatter={(value, name, props) => {

@@ -31,7 +31,7 @@ interface ServiciosMunicipalesData {
     no: number;
   };
   conoce_castracion_por_tipo_mascota: { tipo: string; total: number; conoce_pct: number }[];
-  lugar_castracion_por_tipo_mascota: { tipo: string; solo_municipio: number; solo_privado: number; ambos: number }[];
+  lugar_castracion_por_tipo_mascota: { name: string; Perros: number; Gatos: number; 'Gatos | Perros': number }[];
   conocimiento_por_ciudad: { ciudad: string; total: number; castracion_pct: number; vacunacion_pct: number }[];
   barrios_uso: { barrio: string; total: number; uso_pct: number }[];
   funnel: {
@@ -123,12 +123,7 @@ export function ServiciosMunicipalesPage() {
     noConoce: Number((100 - d.conoce_pct).toFixed(1)),
   }));
 
-  const lugarCastracionPorTipoData = data.lugar_castracion_por_tipo_mascota.map((d) => ({
-    name: tipoMascotaLabels[d.tipo] || d.tipo,
-    municipio: d.solo_municipio,
-    privado: d.solo_privado,
-    ambos: d.ambos,
-  }));
+  const lugarCastracionPorTipoData = data.lugar_castracion_por_tipo_mascota;
 
   const conocimientoPorCiudadData = data.conocimiento_por_ciudad.map((d) => ({
     name: d.ciudad,
@@ -149,20 +144,14 @@ export function ServiciosMunicipalesPage() {
     {
       label: 'Conocen Castración Gratuita',
       value: data.funnel.conocen,
-      pct: 100,
+      pct: data.funnel.total > 0 ? (data.funnel.conocen / data.funnel.total) * 100 : 0,
       color: '#1B3A4B',
     },
     {
       label: 'De los que conocen, accedieron',
       value: data.funnel.conocen_y_accedieron,
-      pct: data.funnel.conocen > 0 ? (data.funnel.conocen_y_accedieron / data.funnel.conocen) * 100 : 0,
+      pct: data.funnel.total > 0 ? (data.funnel.conocen_y_accedieron / data.funnel.total) * 100 : 0,
       color: '#234A5E',
-    },
-    {
-      label: 'Total que accedieron al servicio',
-      value: data.funnel.accedieron,
-      pct: data.funnel.conocen > 0 ? (data.funnel.accedieron / data.funnel.conocen) * 100 : 0,
-      color: '#2D8659',
     },
   ];
 
@@ -292,22 +281,6 @@ export function ServiciosMunicipalesPage() {
             progressBar={{ value: kpis.participacion_municipal_castraciones, color: 'var(--color-success)' }}
             id="stat-svc-participacion-municipal"
           />
-          <StatCard
-            label="Brecha Conocimiento-Acceso"
-            value={`${Math.round(kpis.brecha_conocimiento_acceso * 10) / 10} pp`}
-            icon={<TrendingDown size={16} />}
-            iconColor="warning"
-            badge={{ text: 'Δ Brecha', variant: 'warning' }}
-            id="stat-svc-brecha"
-          />
-          <StatCard
-            label="Satisfacción / Utilidad Percibida"
-            value={`${Math.round(kpis.satisfaccion_utilidad * 10) / 10}%`}
-            icon={<Stethoscope size={16} />}
-            iconColor="teal"
-            progressBar={{ value: kpis.satisfaccion_utilidad, color: 'var(--color-teal)' }}
-            id="stat-svc-satisfaccion"
-          />
         </div>
 
         {/* Charts row 1: Conocimiento vs Acceso + Conocimiento Vacunación */}
@@ -337,7 +310,7 @@ export function ServiciosMunicipalesPage() {
         </div>
 
         {/* Charts row 2: Conocimiento por tipo mascota + Lugar castración por tipo mascota */}
-        <div className={styles.chartsRow}>
+        <div className={styles.singleChartRow}>
           <GroupedBarChart
             title="Conocimiento de Castración Gratuita por Tipo de Mascota"
             subtitle="¿Hay grupos menos informados según mascota?"
@@ -349,21 +322,23 @@ export function ServiciosMunicipalesPage() {
             xAxisKey="name"
             yAxisLabel="Porcentaje"
           />
+        </div>
+        <div className={styles.singleChartRow}>
           <GroupedBarChart
             title="Lugar de Castración por Tipo de Mascota"
             subtitle="Sector público vs privado según especie"
             data={lugarCastracionPorTipoData}
             bars={[
-              { key: 'municipio', name: 'Solo Municipio', color: '#1B3A4B' },
-              { key: 'privado', name: 'Solo Privado', color: '#E8913A' },
-              { key: 'ambos', name: 'Ambos', color: '#2D8659' },
+              { key: 'Perros', name: 'Perros', color: '#1B3A4B' },
+              { key: 'Gatos | Perros', name: 'Gatos | Perros', color: '#2D8659' },
+              { key: 'Gatos', name: 'Gatos', color: '#E8913A' },
             ]}
             xAxisKey="name"
             yAxisLabel="Número de castraciones"
           />
         </div>
 
-        {/* Charts row 3: Conocimiento por ciudad + Barrios uso */}
+        {/* Charts row 3: Conocimiento por ciudad */}
         <div className={styles.chartsRow}>
           <GroupedBarChart
             title="Conocimiento de Servicios por Ciudad"
@@ -376,6 +351,10 @@ export function ServiciosMunicipalesPage() {
             xAxisKey="name"
             yAxisLabel="Porcentaje de conocimiento"
           />
+        </div>
+
+        {/* Charts row 4: Barrios uso */}
+        <div className={styles.singleChartRow}>
           <HorizontalBarChart
             title="Barrios con Mayor Uso de Servicios Municipales"
             subtitle="Geografía del uso de servicios (top barrios)"
@@ -385,14 +364,15 @@ export function ServiciosMunicipalesPage() {
             }))}
             xAxisLabel="% de hogares que accedió a servicios municipales"
             valueFormatter={(value) => `${value}%`}
+            height={500}
           />
         </div>
 
         {/* Funnel: Conocimiento → Acceso → Utilización */}
-        <div className={styles.chartsRow}>
+        <div className={styles.funnelRow}>
           <Card padding="md" className={styles.funnelCard}>
             <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Funnel: Conocimiento → Acceso → Utilización</h3>
+              <h3 className={styles.cardTitle}>Funnel: Conocimiento → Acceso</h3>
             </div>
             <div className={styles.funnel}>
               {funnelSteps.map((step, index) => {
@@ -421,59 +401,6 @@ export function ServiciosMunicipalesPage() {
                   </div>
                 );
               })}
-            </div>
-          </Card>
-
-          {/* Tarjeta de insight */}
-          <Card padding="md" className={styles.insightCard}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Insights Clave</h3>
-            </div>
-            <div className={styles.insightsList}>
-              <div className={styles.insightItem}>
-                <div className={styles.insightIcon} style={{ background: 'var(--color-navy-700)' }}>
-                  <Info size={16} color="#fff" />
-                </div>
-                <div>
-                  <div className={styles.insightLabel}>Conocimiento General</div>
-                  <div className={styles.insightValue}>
-                    {Math.round(kpis.conocimiento_general_servicios * 10) / 10}% de los encuestados conoce al menos un servicio municipal
-                  </div>
-                </div>
-              </div>
-              <div className={styles.insightItem}>
-                <div className={styles.insightIcon} style={{ background: 'var(--color-danger)' }}>
-                  <TrendingDown size={16} color="#fff" />
-                </div>
-                <div>
-                  <div className={styles.insightLabel}>Brecha Principal</div>
-                  <div className={styles.insightValue}>
-                    La brecha entre conocimiento y acceso es de {Math.round(kpis.brecha_conocimiento_acceso * 10) / 10} puntos porcentuales
-                  </div>
-                </div>
-              </div>
-              <div className={styles.insightItem}>
-                <div className={styles.insightIcon} style={{ background: 'var(--color-success)' }}>
-                  <Building2 size={16} color="#fff" />
-                </div>
-                <div>
-                  <div className={styles.insightLabel}>Participación Municipal</div>
-                  <div className={styles.insightValue}>
-                    {kpis.solo_municipio} castraciones solo municipal + {kpis.ambos_municipio_privado} combinado con privado
-                  </div>
-                </div>
-              </div>
-              <div className={styles.insightItem}>
-                <div className={styles.insightIcon} style={{ background: 'var(--color-amber-500)' }}>
-                  <MapPin size={16} color="#fff" />
-                </div>
-                <div>
-                  <div className={styles.insightLabel}>Variación Geográfica</div>
-                  <div className={styles.insightValue}>
-                    {data.conocimiento_por_ciudad.length} ciudades analizadas con diferentes niveles de conocimiento
-                  </div>
-                </div>
-              </div>
             </div>
           </Card>
         </div>

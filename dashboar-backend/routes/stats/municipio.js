@@ -220,16 +220,35 @@ router.get('/servicios-municipales', (req, res) => {
     // ── Lugar de Castración por Tipo de Mascota ──
     const lugarCastracionPorTipoMascota = db.prepare(`
       SELECT
-        tipo_mascota as tipo,
-        SUM(CASE WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 0 THEN 1 ELSE 0 END) as solo_municipio,
-        SUM(CASE WHEN lugar_castracion_particular = 1 AND lugar_castracion_municipio = 0 THEN 1 ELSE 0 END) as solo_privado,
-        SUM(CASE WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 1 THEN 1 ELSE 0 END) as ambos
+        CASE
+          WHEN mascota_castrada = 'No' THEN 'No se encuentra castrada'
+          WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 0 THEN 'Municipio'
+          WHEN lugar_castracion_particular = 1 AND lugar_castracion_municipio = 0 THEN 'En forma particular'
+          WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 1 THEN 'En forma particular | Municipio'
+          WHEN mascota_castrada = 'Si' AND lugar_castracion_municipio = 0 AND lugar_castracion_particular = 0 THEN 'Otro'
+          ELSE 'No se encuentra castrada'
+        END as lugar,
+        tipo_mascota,
+        COUNT(*) as cantidad
       FROM registros
       ${where}
-      AND tipo_mascota IS NOT NULL
-      AND mascota_castrada = 'Si'
-      GROUP BY tipo_mascota
+      GROUP BY lugar, tipo_mascota
     `).all(...params);
+
+    const lugarCastracionPivot = lugarCastracionPorTipoMascota.reduce((acc, curr) => {
+      const { lugar, tipo_mascota, cantidad } = curr;
+      if (!acc[lugar]) {
+        acc[lugar] = {
+          name: lugar,
+          Perros: 0,
+          Gatos: 0,
+          'Gatos | Perros': 0,
+        };
+      }
+      acc[lugar][tipo_mascota] = cantidad;
+      return acc;
+    }, {});
+    const lugarCastracionData = Object.values(lugarCastracionPivot);
 
     // ── Conocimiento de Servicios por Ciudad ──
     const conocimientoPorCiudad = db.prepare(`
@@ -290,8 +309,6 @@ router.get('/servicios-municipales', (req, res) => {
         participacion_municipal_total: totalCastrados,
         solo_municipio: kpis.solo_municipio || 0,
         ambos_municipio_privado: kpis.ambos_municipio_privado || 0,
-        brecha_conocimiento_acceso: total > 0 ? ((kpis.conoce_castracion_si - kpis.accedieron_municipio) / total) * 100 : 0,
-        satisfaccion_utilidad: total > 0 ? (kpis.accedieron_municipio / total) * 100 : 0, // proxy: de los que usaron, consideramos útil
       },
       conocimiento_vs_acceso: {
         conocen_si: conocimientoAccesoCastracion.conocen_si || 0,
@@ -308,12 +325,7 @@ router.get('/servicios-municipales', (req, res) => {
         total: d.total,
         conoce_pct: d.total > 0 ? (d.conoce_si / d.total) * 100 : 0,
       })),
-      lugar_castracion_por_tipo_mascota: lugarCastracionPorTipoMascota.map(d => ({
-        tipo: d.tipo,
-        solo_municipio: d.solo_municipio || 0,
-        solo_privado: d.solo_privado || 0,
-        ambos: d.ambos || 0,
-      })),
+      lugar_castracion_por_tipo_mascota: lugarCastracionData,
       conocimiento_por_ciudad: conocimientoPorCiudad.map(d => ({
         ciudad: d.ciudad,
         total: d.total,
@@ -326,6 +338,7 @@ router.get('/servicios-municipales', (req, res) => {
         uso_pct: d.total > 0 ? (d.uso_municipio / d.total) * 100 : 0,
       })),
       funnel: {
+        total: total,
         conocen: funnelData.conocen || 0,
         conocen_y_accedieron: funnelData.conocen_y_accedieron || 0,
         accedieron: funnelData.accedieron || 0,

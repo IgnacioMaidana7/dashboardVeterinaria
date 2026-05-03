@@ -93,6 +93,20 @@
   gap: var(--space-4);
 }
 
+.funnelRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  justify-content: center; /* Centra el contenido horizontalmente */
+  align-items: center; /* Centra el contenido verticalmente */
+}
+
+.singleChartRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
 /* Card header */
 .cardHeader {
   display: flex;
