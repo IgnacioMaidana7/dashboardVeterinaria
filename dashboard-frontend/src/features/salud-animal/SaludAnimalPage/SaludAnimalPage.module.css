@@ -93,6 +93,11 @@
   gap: var(--space-4);
 }
 
+/* Full-width single chart row */
+.fullWidthChart {
+  width: 100%;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .kpiRow {

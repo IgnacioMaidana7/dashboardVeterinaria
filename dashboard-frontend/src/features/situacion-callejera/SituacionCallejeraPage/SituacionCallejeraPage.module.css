@@ -123,6 +123,10 @@
   gap: var(--space-4);
 }
 
+.fullWidthChart {
+  width: 100%;
+}
+
 .chartsRowSingle {
   display: grid;
   grid-template-columns: 1fr;

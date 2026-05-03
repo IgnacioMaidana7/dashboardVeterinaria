@@ -227,18 +227,31 @@ router.get('/salud-completa', (req, res) => {
     `).all(...params);
 
     // ── Lugar de castración por tipo de mascota ──
-    const lugarCastracionPorTipoMascota = db.prepare(`
+    const lugarCastracionRaw = db.prepare(`
       SELECT
-        tipo_mascota as tipo,
-        SUM(CASE WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 0 THEN 1 ELSE 0 END) as municipio,
-        SUM(CASE WHEN lugar_castracion_particular = 1 AND lugar_castracion_municipio = 0 THEN 1 ELSE 0 END) as privado,
-        SUM(CASE WHEN lugar_castracion_municipio = 1 AND lugar_castracion_particular = 1 THEN 1 ELSE 0 END) as ambos
+        lugar_castracion as lugar,
+        tipo_mascota,
+        COUNT(*) as cantidad
       FROM registros
       ${where}
+      AND lugar_castracion IS NOT NULL
       AND tipo_mascota IS NOT NULL
-      AND mascota_castrada = 'Si'
-      GROUP BY tipo_mascota
+      GROUP BY lugar_castracion, tipo_mascota
     `).all(...params);
+
+    // Pivot: filas = lugar, columnas = tipo_mascota
+    const lugarCastracionPivot = lugarCastracionRaw.reduce((acc, curr) => {
+      const { lugar, tipo_mascota, cantidad } = curr;
+      if (!acc[lugar]) {
+        acc[lugar] = { name: lugar, Perros: 0, Gatos: 0, 'Gatos | Perros': 0 };
+      }
+      if (tipo_mascota in acc[lugar]) {
+        acc[lugar][tipo_mascota] = cantidad;
+      }
+      return acc;
+    }, {});
+    const lugarCastracionPorTipoMascota = Object.values(lugarCastracionPivot);
+
 
     // ── Vacunación por tipo de vivienda ──
     const vacunacionPorTipoVivienda = db.prepare(`
@@ -264,6 +277,31 @@ router.get('/salud-completa', (req, res) => {
       GROUP BY tipo_vivienda
     `).all(...params);
 
+    // ── Tipo de mascota por tipo de vivienda (pivot) ──
+    const tipoMascotaPorViviendaRaw = db.prepare(`
+      SELECT
+        tipo_vivienda,
+        tipo_mascota,
+        COUNT(*) as cantidad
+      FROM registros
+      ${where}
+      AND tipo_vivienda IS NOT NULL
+      AND tipo_mascota IS NOT NULL
+      GROUP BY tipo_vivienda, tipo_mascota
+    `).all(...params);
+
+    const tipoMascotaPorViviendaPivot = tipoMascotaPorViviendaRaw.reduce((acc, curr) => {
+      const { tipo_vivienda, tipo_mascota, cantidad } = curr;
+      if (!acc[tipo_vivienda]) {
+        acc[tipo_vivienda] = { name: tipo_vivienda, Perros: 0, Gatos: 0, 'Gatos | Perros': 0 };
+      }
+      if (tipo_mascota in acc[tipo_vivienda]) {
+        acc[tipo_vivienda][tipo_mascota] = cantidad;
+      }
+      return acc;
+    }, {});
+    const tipoMascotaPorTipoVivienda = Object.values(tipoMascotaPorViviendaPivot);
+
     res.json({
       kpis: {
         tasa_vacunacion: total > 0 ? (kpis.vacunadas_si / total) * 100 : 0,
@@ -280,6 +318,7 @@ router.get('/salud-completa', (req, res) => {
       lugar_castracion_por_tipo_mascota: lugarCastracionPorTipoMascota,
       vacunacion_por_tipo_vivienda: vacunacionPorTipoVivienda,
       castracion_por_tipo_vivienda: castracionPorTipoVivienda,
+      tipo_mascota_por_tipo_vivienda: tipoMascotaPorTipoVivienda,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -448,8 +448,8 @@ export function SituacionCallejeraPage() {
           />
         </div>
 
-        {/* Charts row 2: Frecuencia por barrio + Tipo animal por barrio */}
-        <div className={styles.chartsRow}>
+        {/* Full-width: Frecuencia por barrio */}
+        <div className={styles.fullWidthChart}>
           <GroupedBarChart
             title="Frecuencia de Avistamiento por Barrio"
             subtitle="Top barrios con mayor intensidad de problema"
@@ -462,7 +462,14 @@ export function SituacionCallejeraPage() {
             ]}
             xAxisKey="name"
             yAxisLabel="Número de respuestas"
+            height={450}
+            xAxisAngle={-45}
+            legendPosition="top-right"
           />
+        </div>
+
+        {/* Full-width: Tipo animal por barrio */}
+        <div className={styles.fullWidthChart}>
           <GroupedBarChart
             title="Tipo de Animal Callejero Reportado por Barrio"
             subtitle="Variación del tipo de animal según zona"
@@ -474,6 +481,9 @@ export function SituacionCallejeraPage() {
             ]}
             xAxisKey="name"
             yAxisLabel="Número de reportes"
+            height={450}
+            xAxisAngle={-45}
+            legendPosition="top-right"
           />
         </div>
 

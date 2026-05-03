@@ -22,9 +22,10 @@ interface SaludCompletaData {
   };
   vacunacion_por_tipo_mascota: { tipo: string; si: number; no: number }[];
   castracion_por_tipo_mascota: { tipo: string; si: number; no: number }[];
-  lugar_castracion_por_tipo_mascota: { tipo: string; municipio: number; privado: number; ambos: number }[];
+  lugar_castracion_por_tipo_mascota: { name: string; Perros: number; Gatos: number; 'Gatos | Perros': number }[];
   vacunacion_por_tipo_vivienda: { tipo: string; si: number; no: number }[];
   castracion_por_tipo_vivienda: { tipo: string; si: number; no: number }[];
+  tipo_mascota_por_tipo_vivienda: { name: string; Perros: number; Gatos: number; 'Gatos | Perros': number }[];
 }
 
 interface FiltrosData {
@@ -111,12 +112,11 @@ export function SaludAnimalPage() {
     no: d.no,
   }));
 
-  const lugarCastracionPorTipoMascotaData = data.lugar_castracion_por_tipo_mascota.map((d) => ({
-    name: tipoMascotaLabels[d.tipo] || d.tipo,
-    municipio: d.municipio,
-    privado: d.privado,
-    ambos: d.ambos,
-  }));
+  const lugarCastracionPorTipoMascotaData = [...data.lugar_castracion_por_tipo_mascota].sort(
+    (a, b) =>
+      (b.Perros + b.Gatos + b['Gatos | Perros']) -
+      (a.Perros + a.Gatos + a['Gatos | Perros'])
+  );
 
   const vacunacionPorTipoViviendaData = data.vacunacion_por_tipo_vivienda.map((d) => ({
     name: d.tipo,
@@ -124,11 +124,11 @@ export function SaludAnimalPage() {
     no: d.no,
   }));
 
-  const castracionPorTipoViviendaData = data.castracion_por_tipo_vivienda.map((d) => ({
-    name: d.tipo,
-    si: d.si,
-    no: d.no,
-  }));
+  const tipoMascotaPorTipoViviendaData = [...data.tipo_mascota_por_tipo_vivienda].sort(
+    (a, b) =>
+      (b.Perros + b.Gatos + b['Gatos | Perros']) -
+      (a.Perros + a.Gatos + a['Gatos | Perros'])
+  );
 
   return (
     <div className={styles.page}>
@@ -297,7 +297,7 @@ export function SaludAnimalPage() {
           />
         </div>
 
-        {/* Charts row 2: Castración por tipo mascota + Lugar castración por tipo mascota */}
+        {/* Charts row 2: Castración por tipo mascota + Vacunación por tipo vivienda */}
         <div className={styles.chartsRow}>
           <GroupedBarChart
             title="Castración por Tipo de Mascota"
@@ -311,22 +311,6 @@ export function SaludAnimalPage() {
             yAxisLabel="Número de mascotas"
           />
           <GroupedBarChart
-            title="Lugar de Castración por Tipo de Mascota"
-            subtitle="Participación municipal vs. sector privado según tipo de mascota"
-            data={lugarCastracionPorTipoMascotaData}
-            bars={[
-              { key: 'municipio', name: 'Solo Municipal', color: '#1B3A4B' },
-              { key: 'privado', name: 'Solo Privado', color: '#E8913A' },
-              { key: 'ambos', name: 'Ambos', color: '#2D8659' },
-            ]}
-            xAxisKey="name"
-            yAxisLabel="Número de castraciones"
-          />
-        </div>
-
-        {/* Charts row 3: Vacunación por tipo vivienda + Castración por tipo vivienda */}
-        <div className={styles.chartsRow}>
-          <GroupedBarChart
             title="Vacunación por Tipo de Vivienda"
             subtitle="Distribución de mascotas vacunadas según tipo de vivienda del hogar"
             data={vacunacionPorTipoViviendaData}
@@ -337,16 +321,44 @@ export function SaludAnimalPage() {
             xAxisKey="name"
             yAxisLabel="Número de mascotas"
           />
+        </div>
+
+        {/* Full-width: Lugar de Castración por Tipo de Mascota */}
+        <div className={styles.fullWidthChart}>
           <GroupedBarChart
-            title="Castración por Tipo de Vivienda"
-            subtitle="Distribución de mascotas castradas según tipo de vivienda del hogar"
-            data={castracionPorTipoViviendaData}
+            title="Lugar de Castración por Tipo de Mascota"
+            subtitle="Distribución de cada lugar de castración según tipo de mascota"
+            data={lugarCastracionPorTipoMascotaData}
             bars={[
-              { key: 'si', name: 'Castradas', color: '#1B3A4B' },
-              { key: 'no', name: 'No castradas', color: '#E8913A' },
+              { key: 'Perros', name: 'Perros', color: '#1B3A4B' },
+              { key: 'Gatos | Perros', name: 'Gatos | Perros', color: '#3D8B8B' },
+              { key: 'Gatos', name: 'Gatos', color: '#6B9E5E' },
             ]}
             xAxisKey="name"
-            yAxisLabel="Número de mascotas"
+            yAxisLabel="Cantidad de Mascotas"
+            xAxisLabel="Lugar de Castración"
+            multilineTick
+            height={480}
+            legendPosition="top-right"
+          />
+        </div>
+
+        {/* Full-width: Tipo de Mascota por Tipo de Vivienda */}
+        <div className={styles.fullWidthChart}>
+          <GroupedBarChart
+            title="Tipo de Mascota por Tipo de Vivienda"
+            subtitle="Distribución de tipos de mascota según tipo de vivienda del hogar"
+            data={tipoMascotaPorTipoViviendaData}
+            bars={[
+              { key: 'Perros', name: 'Perros', color: '#1B3A4B' },
+              { key: 'Gatos | Perros', name: 'Gatos | Perros', color: '#3D8B8B' },
+              { key: 'Gatos', name: 'Gatos', color: '#6B9E5E' },
+            ]}
+            xAxisKey="name"
+            yAxisLabel="Cantidad de Mascotas"
+            xAxisLabel="Tipo de Vivienda"
+            height={400}
+            legendPosition="top-right"
           />
         </div>
       </div>
