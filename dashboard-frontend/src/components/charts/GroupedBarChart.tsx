@@ -21,7 +21,7 @@ function MultiLineTick({ x, y, payload }: { x?: number; y?: number; payload?: { 
           key={i}
           x={0}
           y={0}
-          dy={10 + i * lineHeight}
+          dy={5 + i * lineHeight}
           textAnchor="middle"
           fill="var(--text-secondary)"
           fontSize={11}
@@ -114,7 +114,7 @@ export function GroupedBarChart({
             iconSize={8}
             verticalAlign={legendPosition === 'top-right' ? 'top' : 'bottom'}
             align={legendPosition === 'top-right' ? 'right' : 'center'}
-            wrapperStyle={{ fontSize: '12px', fontFamily: 'var(--font-body)', paddingBottom: legendPosition === 'top-right' ? 0 : 8 }}
+            wrapperStyle={{ fontSize: '12px', fontFamily: 'var(--font-body)', paddingBottom: legendPosition === 'top-right' ? 0 : 1 }}
           />
           {bars.map((bar) => (
             <Bar key={bar.key} dataKey={bar.key} name={bar.name} fill={bar.color} radius={[4, 4, 0, 0]} />

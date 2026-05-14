@@ -29,8 +29,7 @@ export function Sidebar() {
           <PawPrint size={22} />
         </div>
         <div className={styles.brandText}>
-          <span className={styles.brandName}>Cassina</span>
-          <span className={styles.brandTagline}>Veterinary Intelligence</span>
+          <span className={styles.brandName}>Veterinaria Cassina</span>
         </div>
       </div>
 

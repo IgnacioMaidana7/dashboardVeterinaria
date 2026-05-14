@@ -90,6 +90,24 @@ const COLOR_A_VECES = '#E8913A';
 const COLOR_NUNCA = '#2D8659';
 const COLOR_RARAMENTE = '#2980B9';
 
+function wrapLabel(text: string, maxLen = 14): string {
+  if (text.length <= maxLen) return text;
+  const words = text.split(' ');
+  let line = '';
+  let result = '';
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (candidate.length > maxLen && line) {
+      result = result ? `${result} | ${line}` : line;
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) result = result ? `${result} | ${line}` : line;
+  return result;
+}
+
 export function SituacionCallejeraPage() {
   const [data, setData] = useState<CallejerosCompletoData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -216,7 +234,7 @@ export function SituacionCallejeraPage() {
 
   // 5. Frecuencia por tipo de vivienda
   const frecuenciaPorTipoViviendaData = data.frecuencia_por_tipo_vivienda.map((v) => ({
-    name: v.tipo_vivienda,
+    name: wrapLabel(v.tipo_vivienda),
     'Todo el tiempo': v.todo_el_tiempo,
     'A veces': v.a_veces,
     Nunca: v.nunca,
@@ -234,7 +252,7 @@ export function SituacionCallejeraPage() {
 
   // 7. Tipo de animal por tipo de vivienda
   const tipoAnimalPorTipoViviendaData = data.tipo_animal_por_tipo_vivienda.map((v) => ({
-    name: v.tipo_vivienda,
+    name: wrapLabel(v.tipo_vivienda),
     Perros: v.perros,
     Gatos: v.gatos,
     Ambos: v.ambos,
@@ -514,6 +532,7 @@ export function SituacionCallejeraPage() {
             ]}
             xAxisKey="name"
             yAxisLabel="Número de respuestas"
+            multilineTick
           />
         </div>
 
@@ -530,6 +549,7 @@ export function SituacionCallejeraPage() {
             ]}
             xAxisKey="name"
             yAxisLabel="Número de reportes"
+            multilineTick
           />
           <GroupedBarChart
             title="Relación: Avistamiento vs Demanda de Medidas"
