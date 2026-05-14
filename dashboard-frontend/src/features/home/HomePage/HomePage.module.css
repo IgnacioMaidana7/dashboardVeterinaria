@@ -107,12 +107,13 @@
 /* ── Module Grid ── */
 .sectionTitle {
   font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-tertiary);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
   margin-bottom: var(--space-4);
+  text-align: center;
 }
 
 .moduleGrid {

@@ -5,9 +5,7 @@ import {
   PawPrint,
   MapPin,
   Building2,
-  BarChart2,
 } from 'lucide-react';
-import { Button } from '@/components/shared';
 import styles from './Sidebar.module.css';
 
 const NAV_ITEMS = [
@@ -57,18 +55,6 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* Footer CTA */}
-      <div className={styles.sidebarFooter}>
-        <Button
-          variant="primary"
-          size="md"
-          icon={<BarChart2 size={16} />}
-          fullWidth
-          id="btn-generar-reporte"
-        >
-          Generar Reporte
-        </Button>
-      </div>
     </aside>
   );
 }

@@ -55,26 +55,7 @@ export function HomePage() {
   return (
     <div className={styles.page}>
       {/* Hero banner */}
-      <Card variant="hero" padding="none" className={styles.heroBanner}>
-        <div className={styles.heroContent}>
-          <div className={styles.heroText}>
-            <div className={styles.heroPill}>
-              <Activity size={13} />
-              <span>Sistema activo</span>
-            </div>
-            <h1 className={styles.heroTitle}>Intelligence Hub</h1>
-            <p className={styles.heroDesc}>
-              Seleccioná un módulo para acceder a métricas en tiempo real,
-              análisis geográficos e información crítica sobre la infraestructura
-              veterinaria regional y el bienestar animal.
-            </p>
-          </div>
-          <div className={styles.heroVisual} aria-hidden="true">
-            <HeroChart />
-          </div>
-        </div>
-      </Card>
-
+      
       {/* Module grid */}
       <section aria-label="Módulos del dashboard">
         <h2 className={styles.sectionTitle}>Módulos</h2>
