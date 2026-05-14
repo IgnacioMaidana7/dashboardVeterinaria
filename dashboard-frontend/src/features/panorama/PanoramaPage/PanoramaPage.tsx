@@ -123,7 +123,7 @@ export function PanoramaPage() {
     <div className={styles.page}>
       <PageHeader
         title="Panorama General"
-        subtitle="Encuesta sobre Tenencia Responsable de Mascotas — San Francisco, Misiones"
+        subtitle="Encuesta sobre Tenencia Responsable de Mascotas — San Francisco, Córdoba"
       />
 
       {/* Filtro por barrio */}

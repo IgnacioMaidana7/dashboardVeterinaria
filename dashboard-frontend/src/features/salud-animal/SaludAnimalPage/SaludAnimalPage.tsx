@@ -35,6 +35,24 @@ interface FiltrosData {
   tipos_mascota: string[];
 }
 
+function wrapLabel(text: string, maxLen = 14): string {
+  if (text.length <= maxLen) return text;
+  const words = text.split(' ');
+  let line = '';
+  let result = '';
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (candidate.length > maxLen && line) {
+      result = result ? `${result} | ${line}` : line;
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) result = result ? `${result} | ${line}` : line;
+  return result;
+}
+
 export function SaludAnimalPage() {
   const [data, setData] = useState<SaludCompletaData | null>(null);
   const [filtros, setFiltros] = useState<FiltrosData>({ ciudades: [], barrios: [], tipos_vivienda: [], tipos_mascota: [] });
@@ -119,7 +137,7 @@ export function SaludAnimalPage() {
   );
 
   const vacunacionPorTipoViviendaData = data.vacunacion_por_tipo_vivienda.map((d) => ({
-    name: d.tipo,
+    name: wrapLabel(d.tipo),
     si: d.si,
     no: d.no,
   }));
@@ -320,6 +338,7 @@ export function SaludAnimalPage() {
             ]}
             xAxisKey="name"
             yAxisLabel="Número de mascotas"
+            multilineTick
           />
         </div>
 
